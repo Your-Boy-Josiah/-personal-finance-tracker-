@@ -1,0 +1,77 @@
+// ===============================================================
+//  Transaction.js
+//  Mongoose model defining the schema for user transactions.
+//  Handles core financial records (income/expenses), relational
+//  links to Users, and dynamic virtual properties.
+// ===============================================================
+
+const PM = require('mongoose'); 
+
+// ==============================================================
+// SCHEMA DEFINITION
+// ==============================================================
+
+const transactionSchema = new PM.Schema(
+  {
+    user: {
+      type: PM.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Transaction must belong to a user'],
+      index: true, // Indexed to quickly fetch a specific user's transaction history
+    },
+    type: {
+      type: String,
+      enum: ['income', 'expense'],
+      required: [true, 'Transaction type is required'],
+    },
+    amount: {
+      type: Number,
+      required: [true, 'Transaction amount is required'],
+      min: [0.01, 'Amount must be greater than zero'],
+    },
+    category: {
+      type: String, // Can be updated to ObjectId later if categories become dynamic
+      required: [true, 'Transaction category is required'],
+      trim: true,
+      index: true, // Indexed for fast filtering by category in the frontend
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    transactionDate: {
+      type: Date,
+      default: Date.now,
+      index: true, // Indexed for fast sorting and monthly reporting
+    }
+  },
+  // ============================================================
+  // SCHEMA OPTIONS
+  // ============================================================
+  { 
+    timestamps: true,              // Automatically adds 'createdAt' and 'updatedAt' fields
+    toJSON: { virtuals: true },    // Tells Mongoose to include virtuals in API JSON responses
+    toObject: { virtuals: true }   // Tells Mongoose to include virtuals in standard console.logs
+  }
+);
+
+// ============================================================
+// VIRTUAL PROPERTIES
+// Dynamic fields that are computed on-the-fly when requested.
+// These are NOT saved to the MongoDB database, saving space.
+// ============================================================
+
+// Virtual: Format the amount with a strict +/- sign for frontend display
+transactionSchema.virtual('formattedAmount').get(function () {
+  return this.type === 'expense' ? `-${this.amount}` : `+${this.amount}`;
+});
+
+// ============================================================
+// MODEL COMPILATION & EXPORT
+// Compiles the schema into a usable model and exports it
+// ============================================================
+
+const Transaction = PM.model('Transaction', transactionSchema); 
+
+module.exports = Transaction;

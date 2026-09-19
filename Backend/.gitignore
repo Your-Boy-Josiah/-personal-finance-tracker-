@@ -1,0 +1,18 @@
+# Dependency directories
+node_modules/
+
+# Environment variables (SECURITY CRITICAL)
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Testing coverage
+coverage/
+
+# OS & Editor generated files
+.DS_Store
+.vscode/
+Thumbs.db
