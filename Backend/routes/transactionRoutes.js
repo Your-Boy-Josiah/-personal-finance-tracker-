@@ -19,6 +19,10 @@ const {
 // Import security middleware
 const { protect } = require('../middleware/authMiddleware');
 
+const validate = require('../utils/validate');
+
+const {createTransactionSchema, updateTransactionSchema} = require('../validations/transactionSchema')
+
 // ==============================================================
 // PRIVATE ROUTES
 // ==============================================================
@@ -29,13 +33,14 @@ const { protect } = require('../middleware/authMiddleware');
 // @access  Private (Requires valid JWT)
 router.route('/')
   .get(protect, getTransactions)
-  .post(protect, addTransaction);
+  .post(protect, validate(createTransactionSchema), addTransaction);
 
+// @route   PUT /api/transactions/:id
 // @route   DELETE /api/transactions/:id
-// @desc    Delete a specific transaction
+// @desc    Update or delete a specific transaction
 // @access  Private (Requires valid JWT)
 router.route('/:id')
-  .put(protect, updateTransaction)     
+  .put(protect, validate(updateTransactionSchema), updateTransaction)
   .delete(protect, deleteTransaction);
 
 // ============================================================
