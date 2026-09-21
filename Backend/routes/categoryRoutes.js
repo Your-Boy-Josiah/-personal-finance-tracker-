@@ -13,6 +13,9 @@ const { getCategories, createCategory } = require('../controllers/categoryContro
 
 // Import security middleware
 const { protect } = require('../middleware/authMiddleware');
+const validate = require('../utils/validate');
+// Import Joi validation schema for category validation
+const categorySchema = require('../validations/categorySchema');
 
 // ==============================================================
 // PRIVATE ROUTES
@@ -24,7 +27,7 @@ const { protect } = require('../middleware/authMiddleware');
 // @access  Private (Requires valid JWT)
 router.route('/')
   .get(protect, getCategories)
-  .post(protect, createCategory);
+  .post(protect, validate(categorySchema), createCategory); // Apply validation middleware to ensure request body adheres to categorySchema
 
 // ============================================================
 // EXPORT ROUTER
