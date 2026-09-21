@@ -1,12 +1,26 @@
-const joi = require('joi')
+// ===============================================================
+//  categorySchema.js
+//  Joi validation schemas for transaction categories.
+//  Ensures category names, types, and hex colors are valid.
+// ===============================================================
 
-// Define the schema for category validation. With this we determine what to expect from the inut data and how to validate it. This ensures that the data is in the correct format before it is processed or stored in the database.
-const categorySchema = joi.object({
-  name: joi.string().min(2).max(100).required(),
-  type: joi.string().valid('income', 'expense').required(),
-  color: joi.string().pattern(/^#([0-9A-F]{3}){1,2}$/i).optional(),
-  user: joi.string().hex().length(24).required(), // Assuming user ID is a MongoDB ObjectId
-  description: joi.string().max(255).optional()
-})
+const Joi = require('joi');
 
-module.exports = categorySchema
+const categorySchema = Joi.object({
+  name: Joi.string().trim().min(2).max(100).required().messages({
+    'string.empty': 'Category name is required'
+  }),
+  type: Joi.string().valid('income', 'expense').required().messages({
+    'any.only': 'Category type must be either income or expense'
+  }),
+  color: Joi.string().pattern(/^#([0-9A-F]{3}){1,2}$/i).optional().messages({
+    'string.pattern.base': 'Color must be a valid hex code (e.g., #FF5733)'
+  })
+  // NOTE: 'user' is intentionally excluded here. 
+  // It will be attached by the authMiddleware, not the request body.
+});
+
+// ============================================================
+// EXPORT SCHEMAS
+// ============================================================
+module.exports = categorySchema;

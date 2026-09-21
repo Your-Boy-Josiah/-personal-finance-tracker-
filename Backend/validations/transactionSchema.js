@@ -1,23 +1,36 @@
-const joi = require('joi');
+// ===============================================================
+//  transactionSchema.js
+//  Joi validation schemas for financial transactions.
+//  Ensures amounts are positive and object references are valid.
+// ===============================================================
 
-// Define the schema for category validation. With this we determine what to expect from the input data and how to validate it. This ensures that the data is in the correct format before it is processed or stored in the database.
-const createTransactionSchema = joi.object({
-  amount: joi.number().required().min(0), // Amount must be a non-negative number
-  category: joi.string().hex().length(24).required(), // Assuming category ID is a MongoDB ObjectId
-  transactionDate: joi.date().iso().required(),
-  type: joi.string().valid('income', 'expense').required(), // Date must be in ISO format
-  description: joi.string().max(255).optional(), // Description is optional and can have a maximum length of 255 characters
-  user: joi.string().hex().length(24).required() // Assuming user ID is a MongoDB ObjectId
-})
+const Joi = require('joi');
 
-const updateTransactionSchema = joi.object({
-  amount: joi.number().min(0).optional(), // Amount must be a non-negative number if provided
-  category: joi.string().hex().length(24).optional(), // Assuming category ID is a MongoDB ObjectId
-  transactionDate: joi.date().iso().optional(), // Date must be in ISO format if provided
-  type: joi.string().valid('income', 'expense').optional(), // Type must be either 'income' or 'expense' if provided
-  description: joi.string().max(255).optional() // Description is optional and can have a maximum length of 255 characters
-})
+const createTransactionSchema = Joi.object({
+  amount: Joi.number().greater(0).required().messages({
+    'number.greater': 'Transaction amount must be greater than zero',
+    'any.required': 'Transaction amount is required'
+  }),
+  category: Joi.string().hex().length(24).required().messages({
+    'string.length': 'Invalid category ID format'
+  }),
+  type: Joi.string().valid('income', 'expense').required(),
+  transactionDate: Joi.date().iso().optional(), // Optional because Mongoose defaults to Date.now
+  description: Joi.string().trim().max(255).optional().allow('')
+  // NOTE: 'user' is intentionally excluded here.
+});
 
+const updateTransactionSchema = Joi.object({
+  amount: Joi.number().greater(0).optional(),
+  category: Joi.string().hex().length(24).optional(),
+  type: Joi.string().valid('income', 'expense').optional(),
+  transactionDate: Joi.date().iso().optional(),
+  description: Joi.string().trim().max(255).optional().allow('')
+});
+
+// ============================================================
+// EXPORT SCHEMAS
+// ============================================================
 module.exports = {
   createTransactionSchema,
   updateTransactionSchema
