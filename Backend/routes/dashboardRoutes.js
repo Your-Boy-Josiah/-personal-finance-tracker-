@@ -1,15 +1,14 @@
 // ===============================================================
-//  categoryRoutes.js
-//  Defines the API endpoints for transaction categories.
-//  Applies security middleware to ensure only authenticated
-//  users can access or create categories.
+//  dashboardRoutes.js
+//  Defines the API endpoints for dashboard analytics.
+//  Applies security middleware to protect financial summaries.
 // ===============================================================
 
 const express = require('express');
 const router = express.Router();
 
-// Import controller functions
-const { getCategories, createCategory } = require('../controllers/categoryController');
+// Import controller function
+const { getDashboardSummary } = require('../controllers/dashboardController');
 
 // Import security middleware
 const { protect } = require('../middleware/authMiddleware');
@@ -18,13 +17,10 @@ const { protect } = require('../middleware/authMiddleware');
 // PRIVATE ROUTES
 // ==============================================================
 
-// @route   GET /api/categories
-// @route   POST /api/categories
-// @desc    Get user categories or create a new custom category
+// @route   GET /api/dashboard/summary
+// @desc    Get aggregated financial totals
 // @access  Private (Requires valid JWT)
-router.route('/')
-  .get(protect, getCategories)
-  .post(protect, createCategory);
+router.route('/summary').get(protect, getDashboardSummary);
 
 // ============================================================
 // EXPORT ROUTER

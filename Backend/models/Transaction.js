@@ -30,9 +30,9 @@ const transactionSchema = new PM.Schema(
       min: [0.01, 'Amount must be greater than zero'],
     },
     category: {
-      type: String, // Can be updated to ObjectId later if categories become dynamic
+      type: PM.Schema.Types.ObjectId,
+      ref: 'Category',
       required: [true, 'Transaction category is required'],
-      trim: true,
       index: true, // Indexed for fast filtering by category in the frontend
     },
     description: {
