@@ -3,6 +3,7 @@ node_modules/
 
 # Environment variables (SECURITY CRITICAL)
 .env
+.env.example
 
 # Logs
 logs
