@@ -136,8 +136,77 @@ const syncBankTransactions = async (userId) => {
   }));
 };
 
+// ============================================================
+// IDEMPOTENT BULK UPSERT ENGINE (Task B-3)
+// Persists normalized transactions using bulkWrite + upsert, keyed
+// on bankTransactionId. Relies on the { user: 1, bankTransactionId: 1 }
+// unique partial index from B-1 as the source of truth — the upsert
+// filter below is what makes repeated sync calls idempotent.
+// ============================================================
+
+/**
+ * Bulk-upserts an array of normalized bank transactions.
+ *
+ * @param {Array<Object>} normalizedTransactions - output of syncBankTransactions()
+ * @returns {Promise<Object>} summary of the bulk write result
+ */
+const upsertBankTransactions = async (normalizedTransactions) => {
+  if (!Array.isArray(normalizedTransactions) || normalizedTransactions.length === 0) {
+    return { matched: 0, upserted: 0, modified: 0 };
+  }
+
+  const operations = normalizedTransactions.map((tx) => {
+    if (!tx.bankTransactionId) {
+      throw new Error("Cannot upsert a transaction without bankTransactionId");
+    }
+    if (!tx.user) {
+      throw new Error("Cannot upsert a transaction without a user reference");
+    }
+
+    // Only fields that can legitimately change on a re-sync are updated.
+    // user/bankTransactionId are the match keys and never change.
+    // category is deliberately excluded — if a user re-categorizes a
+    // transaction manually, a later sync should NOT silently overwrite it.
+    const { user, bankTransactionId, ...updatableFields } = tx;
+
+    return {
+      updateOne: {
+        filter: { user, bankTransactionId },
+        update: {
+          $set: updatableFields,
+          $setOnInsert: { user, bankTransactionId },
+        },
+        upsert: true,
+      },
+    };
+  });
+
+  const result = await Transaction.bulkWrite(operations, { ordered: false });
+
+  return {
+    matched: result.matchedCount,
+    upserted: result.upsertedCount,
+    modified: result.modifiedCount,
+  };
+};
+
+/**
+ * Convenience wrapper: syncs a user's bank transactions and immediately
+ * persists them via the idempotent bulk upsert. This is the function
+ * your controller route (e.g. POST /api/transactions/sync) should call.
+ *
+ * @param {string} userId
+ * @returns {Promise<Object>} bulk write summary
+ */
+const syncAndPersistTransactions = async (userId) => {
+  const normalizedTransactions = await syncBankTransactions(userId);
+  return upsertBankTransactions(normalizedTransactions);
+};
+
 module.exports = {
   syncBankTransactions,
-  decryptToken, // exported for reuse in B-3 / tests
+  upsertBankTransactions,
+  syncAndPersistTransactions,
+  decryptToken, // exported for reuse / tests
   normalizeMonoTransaction,
 };
