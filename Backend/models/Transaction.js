@@ -44,7 +44,30 @@ const transactionSchema = new PM.Schema(
       type: Date,
       default: Date.now,
       index: true, // Indexed for fast sorting and monthly reporting
-    }
+    },
+
+    // ==========================================================
+    // BANK SYNC FIELDS (Task B-1)
+    // Populated when a transaction originates from a linked bank
+    // account via Mono/Okra sync, rather than manual user entry.
+    // ==========================================================
+    bankTransactionId: {
+      type: String,
+      index: true,
+      sparse: true, // allows manually-added transactions without this field
+    },
+    bankName: {
+      type: String,
+      default: null,
+    },
+    merchant: {
+      type: String,
+      default: null,
+    },
+    rawDescription: {
+      type: String,
+      default: null, // unprocessed description string as returned by the bank API
+    },
   },
   // ============================================================
   // SCHEMA OPTIONS
@@ -54,6 +77,18 @@ const transactionSchema = new PM.Schema(
     toJSON: { virtuals: true },    // Tells Mongoose to include virtuals in API JSON responses
     toObject: { virtuals: true }   // Tells Mongoose to include virtuals in standard console.logs
   }
+);
+
+// ============================================================
+// COMPOUND INDEXES
+// ============================================================
+
+// Prevents duplicate bank-synced transactions per user. Only enforced on documents that actually have a bankTransactionId, so manually entered transactions are unaffected. 
+// This is what B-3's bulkWrite
+// upsert logic relies on for idempotency.
+transactionSchema.index(
+  { user: 1, bankTransactionId: 1 },
+  { unique: true, partialFilterExpression: { bankTransactionId: { $exists: true } } }
 );
 
 // ============================================================

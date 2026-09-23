@@ -5,6 +5,7 @@
 // ===============================================================
 
 const Transaction = require('../models/Transaction');
+const { syncAndPersistTransactions } = require('../services/transactionServices');
 
 // ==============================================================
 // CONTROLLER FUNCTIONS
@@ -110,6 +111,30 @@ const deleteTransaction = async (req, res) => {
   }
 };
 
+// @desc    Sync the user's bank transactions from Mono and upsert them
+//          without creating duplicates
+// @route   POST /api/transactions/sync
+// @access  Private
+const syncTransactions = async (req, res) => {
+  try {
+    const result = await syncAndPersistTransactions(req.user._id);
+
+    res.status(200).json({
+      message: 'Bank transactions synced successfully',
+      ...result, // { matched, upserted, modified }
+    });
+  } catch (error) {
+    // "User has not connected a bank account" / "User not found" are
+    // client-side problems (400), not server errors (500).
+    const isClientError = /not connected|user not found/i.test(error.message);
+
+    res.status(isClientError ? 400 : 500).json({
+      message: isClientError ? error.message : 'Server error syncing bank transactions',
+      error: error.message,
+    });
+  }
+};
+
 // ============================================================
 // EXPORT CONTROLLERS
 // ============================================================
@@ -119,4 +144,5 @@ module.exports = {
   addTransaction,
   updateTransaction,
   deleteTransaction,
+  syncTransactions,
 };
