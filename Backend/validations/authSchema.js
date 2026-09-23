@@ -1,7 +1,8 @@
 // ===============================================================
 //  authSchema.js
 //  Joi validation schemas for user authentication routes.
-//  Ensures secure passwords, valid emails, and proper string formatting.
+//  Ensures secure passwords, valid emails, and proper string
+//  formatting, including the forgot/reset password flow.
 // ===============================================================
 
 const Joi = require('joi');
@@ -36,7 +37,20 @@ const loginSchema = Joi.object({
   })
 });
 
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required().trim().lowercase().messages({
+    'string.email': 'Please enter a valid email address'
+  })
+});
+
+const resetPasswordSchema = Joi.object({
+  password: Joi.string().min(8).required().pattern(passwordRegex).messages({
+    'string.pattern.base': 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&)'
+  })
+  // NOTE: the reset token itself travels as a route param, not in the body.
+});
+
 // ============================================================
 // EXPORT SCHEMAS
 // ============================================================
-module.exports = { registerSchema, loginSchema };
+module.exports = { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema };
