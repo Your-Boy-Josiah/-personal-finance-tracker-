@@ -14,6 +14,7 @@ const {
   addTransaction,
   updateTransaction,
   deleteTransaction,
+  syncTransactions
 } = require('../controllers/transactionController');
 
 // Import security middleware
@@ -43,6 +44,11 @@ router.route('/:id')
   .put(protect, validate(updateTransactionSchema), updateTransaction)
   .delete(protect, deleteTransaction);
 
+// @route   POST /api/transactions/sync
+// @desc Syncs the user's bank transactions from Mono and upsert them
+// @access Private (Require valid JWT)
+router.route('/sync')
+  .post(protect, syncTransactions);
 // ============================================================
 // EXPORT ROUTER
 // ============================================================
