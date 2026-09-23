@@ -3,7 +3,7 @@ node_modules/
 
 # Environment variables (SECURITY CRITICAL)
 .env
-.env.local 
+.env.local
 
 # Logs
 logs
