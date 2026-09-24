@@ -1,12 +1,12 @@
 // ===============================================================
 //  budgetRoutes.js
-//  Defines the protected budget and advisory endpoints. The
-//  router is mounted in app.js as /api/budget so only authenticated
-//  users can access their own budget data and advice.
+//  Defines the protected budget and advisory endpoints.
 // ===============================================================
 
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
+const validate = require('../utils/validate');
+const { updateBudgetSchema } = require('../validations/budgetSchema');
 const { getBudget, updateBudget } = require('../controllers/budgetController');
 const { getAdvisory } = require('../controllers/advisoryController');
 
@@ -14,20 +14,14 @@ const router = express.Router();
 
 // ============================================================== 
 // BUDGET ROUTES
-// GET reads the current planning document. PUT creates it if absent or
-// updates it if present, keeping one budget per authenticated user.
 // ============================================================== 
-router.route('/').get(protect, getBudget).put(protect, updateBudget);
+router.route('/')
+  .get(protect, getBudget)
+  .put(protect, validate(updateBudgetSchema), updateBudget); // FIX: Added Joi validation
 
 // ============================================================== 
 // ADVISORY ROUTE
-// Advice is separate from CRUD so clients can request fresh calculations
-// without changing the saved budget configuration.
 // ============================================================== 
 router.get('/advisory', protect, getAdvisory);
-
-// ============================================================
-// EXPORT ROUTER
-// ============================================================
 
 module.exports = router;

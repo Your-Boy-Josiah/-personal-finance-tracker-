@@ -1,19 +1,12 @@
 // ===============================================================
 //  advisoryService.js
-//  advisory engine. This service turns the user's current-month
-//  expense history into practical guidance by classifying transactions,
-//  aggregating totals, comparing category spending with budget caps, and
-//  returning actionable advice. It never blocks or rewrites transactions.
+//  Advisory engine. Turns expense history into practical guidance.
+//  Upgraded to provide positive reinforcement and flag uncategorized data.
 // ===============================================================
 
 const Budget = require('../models/Budget');
 const Transaction = require('../models/Transaction');
 
-// ============================================================== 
-// KEYWORD GROUPS
-// Category names and descriptions are used by the lightweight rule-based
-// classifier. Unmatched expenses are kept in the miscellaneous group.
-// ============================================================== 
 const ESSENTIAL_KEYWORDS = [
   'rent', 'housing', 'mortgage', 'utility', 'utilities', 'electricity',
   'water', 'food', 'groceries', 'health', 'medical', 'medicine',
@@ -26,36 +19,15 @@ const NON_ESSENTIAL_KEYWORDS = [
 ];
 
 class AdvisoryService {
-  // ============================================================== 
-  // classifyTransaction()
-  // Labels an expense as essential, non-essential/cut-back, or
-  // miscellaneous using its populated category name and description.
-  // Uncategorized bank transactions safely fall back to miscellaneous.
-  // ============================================================== 
   classifyTransaction(transaction) {
-    const categoryName = transaction.category && transaction.category.name
-      ? transaction.category.name
-      : '';
+    const categoryName = transaction.category && transaction.category.name ? transaction.category.name : '';
     const text = `${categoryName} ${transaction.description || ''}`.toLowerCase();
 
-    if (ESSENTIAL_KEYWORDS.some((keyword) => text.includes(keyword))) {
-      return 'essential';
-    }
-
-    if (NON_ESSENTIAL_KEYWORDS.some((keyword) => text.includes(keyword))) {
-      return 'non-essential/cut-back';
-    }
-
+    if (ESSENTIAL_KEYWORDS.some((keyword) => text.includes(keyword))) return 'essential';
+    if (NON_ESSENTIAL_KEYWORDS.some((keyword) => text.includes(keyword))) return 'non-essential/cut-back';
     return 'miscellaneous';
   }
 
-  // ============================================================== 
-  // getAdvice()
-  // 1. Load this month's expenses and the user's budget.
-  // 2. Classify transactions and aggregate totals by category.
-  // 3. Compare category totals with saved spending caps.
-  // 4. Return classifications, overspend data, and recommendations.
-  // ============================================================== 
   async getAdvice(userId) {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -66,7 +38,7 @@ class AdvisoryService {
       Transaction.find({
         user: userId,
         type: 'expense',
-        transactionDate: { $gte: monthStart, $lt: nextMonthStart },
+        transactionDate: { $gte: monthStart,$lt: nextMonthStart },
       }).populate('category', 'name type color'),
     ]);
 
@@ -82,53 +54,63 @@ class AdvisoryService {
     const classificationTotals = classifiedTransactions.reduce((totals, transaction) => {
       totals[transaction.classification] += transaction.amount;
       return totals;
-    }, {
-      essential: 0,
-      miscellaneous: 0,
-      'non-essential/cut-back': 0,
-    });
+    }, { essential: 0, miscellaneous: 0, 'non-essential/cut-back': 0 });
 
     const categoryTotals = new Map();
     for (const transaction of classifiedTransactions) {
-      const categoryId = transaction.category && transaction.category._id
-        ? String(transaction.category._id)
-        : 'uncategorized';
-      const current = categoryTotals.get(categoryId) || {
-        category: transaction.category,
-        spent: 0,
-      };
+      const categoryId = transaction.category && transaction.category._id ? String(transaction.category._id) : 'uncategorized';
+      const current = categoryTotals.get(categoryId) || { category: transaction.category, spent: 0 };
       current.spent += transaction.amount;
       categoryTotals.set(categoryId, current);
     }
 
-    const overspentCategories = (budget ? budget.categoryLimits : []).reduce((overspent, limit) => {
-      const categoryId = String(limit.category && limit.category._id
-        ? limit.category._id
-        : limit.category);
-      const spent = categoryTotals.get(categoryId);
-      const amountOver = spent ? spent.spent - limit.spendingCap : 0;
+    const advice = [];
 
-      if (amountOver > 0) {
-        overspent.push({
+    // FIX 1: Explicitly warn the user about uncategorized bank transactions
+    const uncategorizedCount = classifiedTransactions.filter(t => !t.category).length;
+    if (uncategorizedCount > 0) {
+      advice.push({
+        category: null,
+        status: 'warning',
+        message: `You have ${uncategorizedCount} uncategorized transaction(s). Categorize them so they count toward your budget limits!`
+      });
+    }
+
+    // FIX 2: Evaluate spending vs caps (including positive reinforcement)
+    const overspentCategories = [];
+    (budget ? budget.categoryLimits : []).forEach(limit => {
+      const categoryId = String(limit.category && limit.category._id ? limit.category._id : limit.category);
+      const spentObj = categoryTotals.get(categoryId);
+      const spent = spentObj ? spentObj.spent : 0;
+      const difference = spent - limit.spendingCap;
+
+      if (difference > 0) {
+        overspentCategories.push({ category: limit.category, spendingCap: limit.spendingCap, spent, amountOver: difference });
+        advice.push({
           category: limit.category,
-          spendingCap: limit.spendingCap,
-          spent: spent.spent,
-          amountOver,
+          status: 'over_budget',
+          message: `Spending is ${difference.toFixed(2)} over the cap. Review non-essential spending here.`
+        });
+      } else if (difference < 0) {
+        advice.push({
+          category: limit.category,
+          status: 'under_budget',
+          message: `Great job! You are ${Math.abs(difference).toFixed(2)} under your cap for this category.`
+        });
+      } else {
+        advice.push({
+          category: limit.category,
+          status: 'on_budget',
+          message: `You have exactly hit your spending cap for this category.`
         });
       }
-
-      return overspent;
-    }, []);
-
-    const advice = overspentCategories.map((item) => ({
-      category: item.category,
-      message: `Spending is ${item.amountOver.toFixed(2)} over the cap. Review non-essential spending in this category and set a lower target for the rest of the month.`,
-    }));
+    });
 
     if (classificationTotals['non-essential/cut-back'] > 0) {
       advice.push({
         category: null,
-        message: `You spent ${classificationTotals['non-essential/cut-back'].toFixed(2)} on non-essential items this month. Consider redirecting part of this amount toward your savings goal.`,
+        status: 'info',
+        message: `You spent ${classificationTotals['non-essential/cut-back'].toFixed(2)} on non-essential items this month. Consider redirecting part of this toward savings.`,
       });
     }
 
