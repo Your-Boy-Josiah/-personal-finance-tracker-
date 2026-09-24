@@ -1,6 +1,6 @@
 // ===============================================================
 //  budgetAdvisory.test.js
-//  Database-free tests for the Team C budget foundation and advisory
+//  Database-free tests for the budget foundation and advisory
 //  classification rules. These checks verify required budget fields and
 //  all three advisory labels without requiring a running MongoDB instance.
 // ===============================================================

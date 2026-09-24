@@ -1,6 +1,6 @@
 // ===============================================================
 //  advisoryService.js
-//  Team C advisory engine. This service turns the user's current-month
+//  advisory engine. This service turns the user's current-month
 //  expense history into practical guidance by classifying transactions,
 //  aggregating totals, comparing category spending with budget caps, and
 //  returning actionable advice. It never blocks or rewrites transactions.

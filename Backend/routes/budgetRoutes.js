@@ -1,6 +1,6 @@
 // ===============================================================
 //  budgetRoutes.js
-//  Defines the protected Team C budget and advisory endpoints. The
+//  Defines the protected budget and advisory endpoints. The
 //  router is mounted in app.js as /api/budget so only authenticated
 //  users can access their own budget data and advice.
 // ===============================================================

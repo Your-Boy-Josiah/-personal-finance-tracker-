@@ -1,7 +1,7 @@
 // ===============================================================
 //  Budget.js
 //  Mongoose model that stores each user's budget foundation for the
-//  Team C budgeting and advisory workflow. This document is created
+//  Budget and Advisory workflow. This document is created
 //  once per user and acts as the master source of truth for income,
 //  spending caps, and category-level budget rules. The schema keeps
 //  this data separate from raw transactions so the system can compare

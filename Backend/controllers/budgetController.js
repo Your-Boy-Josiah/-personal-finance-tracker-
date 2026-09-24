@@ -1,6 +1,6 @@
 // ===============================================================
 //  budgetController.js
-//  Handles the Team C budget foundation flow: retrieving the logged-in
+//  Handles the budget foundation flow: retrieving the logged-in
 //  user's budget settings and upserting the document with monthly
 //  income, frequency, currency, and category spending caps. This layer
 //  does not block overspending; it stores caps for later comparison.

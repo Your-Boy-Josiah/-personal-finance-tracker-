@@ -1,6 +1,6 @@
 // ===============================================================
 //  advisoryController.js
-//  API controller for the Team C budgeting advice flow. It delegates
+//  API controller for the Budget and Advisory budgeting advice flow. It delegates
 //  calculations to the advisory service and returns the result as JSON,
 //  keeping the route layer separate from business logic.
 // ===============================================================
