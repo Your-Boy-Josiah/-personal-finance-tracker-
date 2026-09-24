@@ -51,6 +51,8 @@ app.use("/api/categories", require("./routes/categoryRoutes"));
 app.use("/api/transactions", require("./routes/transactionRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/bank", require("./routes/bankRoutes"));
+// Budget and Advisory budget setup, category caps, and financial advisory endpoints.
+app.use("/api/budget", require("./routes/budgetRoutes"));
 
 // ==============================================================
 // CUSTOM ERROR HANDLING
