@@ -1,0 +1,78 @@
+Install the REST Client extension in VS Code to run this file.
+
+@baseUrl = http://localhost:5000/api
+@token = PASTE_YOUR_JWT_TOKEN_HERE
+@categoryId = 6ab53a90ded84627f91309d6
+
+### =========================================================================
+### 1. AUTHENTICATION
+### Log in to generate a new JWT Token. Paste the returned token into the 
+### @token variable at the top of this file.
+### =========================================================================
+
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "josiah.test@example.com",
+  "password": "Password123!"
+}
+
+
+### =========================================================================
+### 2. CREATE OR UPDATE BUDGET
+### Creates a monthly budget with a spending cap on the selected category.
+### =========================================================================
+
+PUT {{baseUrl}}/budget
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "monthlyIncome": 800000,
+  "incomeFrequency": "monthly",
+  "currency": "NGN",
+  "categoryLimits": [
+    {
+      "category": "{{categoryId}}",
+      "spendingCap": 10000
+    }
+  ]
+}
+
+
+### =========================================================================
+### 3. GET CURRENT BUDGET
+### Retrieves the user's budget and populated category rules.
+### =========================================================================
+
+GET {{baseUrl}}/budget
+Authorization: Bearer {{token}}
+
+
+### =========================================================================
+### 4. RECORD MOCK EXPENSE TRANSACTION
+### Logs a transaction. Modify the amount to test over/under budget scenarios.
+### =========================================================================
+
+POST {{baseUrl}}/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "expense",
+  "amount": 15000,
+  "category": "{{categoryId}}",
+  "description": "Monthly Software Subscriptions",
+  "transactionDate": "2026-09-24T15:00:00.000Z"
+}
+
+
+### =========================================================================
+### 5. GET FINANCIAL ADVISORY
+### Generates real-time gamified advice based on the month's spending vs caps.
+### =========================================================================
+
+GET {{baseUrl}}/budget/advisory
+Authorization: Bearer {{token}}
+
