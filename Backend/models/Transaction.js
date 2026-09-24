@@ -32,7 +32,12 @@ const transactionSchema = new PM.Schema(
     category: {
       type: PM.Schema.Types.ObjectId,
       ref: 'Category',
-      required: [true, 'Transaction category is required'],
+      // FIX: Only require a category if this is a manually entered transaction.
+      // Bank-synced transactions can be categorized later by the user.
+      required: [
+        function() { return !this.bankTransactionId; }, 
+        'Transaction category is required for manual entries'
+      ],
       index: true, // Indexed for fast filtering by category in the frontend
     },
     description: {
