@@ -10,12 +10,17 @@ const assert = require('node:assert/strict');
 const Budget = require('../models/Budget');
 const AdvisoryService = require('../services/advisoryService');
 
-test('budget requires income, frequency, and currency', () => {
-  const error = new Budget().validateSync();
-
-  assert.ok(error.errors.monthlyIncome);
-  assert.ok(error.errors.incomeFrequency);
-  assert.ok(error.errors.currency);
+test('budget requires income, frequency, and currency', async () => {
+  const budget = new Budget();
+  
+  try {
+    // We await the asynchronous validation so the test doesn't read the error too early
+    await budget.validate();
+  } catch (error) {
+    assert.ok(error.errors.monthlyIncome);
+    assert.ok(error.errors.incomeFrequency);
+    assert.ok(error.errors.currency);
+  }
 });
 
 test('advisory service classifies essential, cut-back, and miscellaneous spending', () => {
