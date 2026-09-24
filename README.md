@@ -38,3 +38,55 @@ Capstone Project for TS Academy
 * **Dashboard & Analytics:**
   * Created `dashboardController.js` utilizing **MongoDB Aggregation Pipelines**.
   * Offloads heavy math to the database to calculate total income, total expenses, and net balance efficiently, ensuring server stability as transaction volumes grow.
+
+## Team C Budgeting & Advisory Task
+
+This task adds a separate budgeting and financial advisory layer while preserving the existing transaction and bank-sync flows.
+
+### Budget Schema and Frequency Setup
+
+`models/Budget.js` stores one budget document per authenticated user. It references `User` through an `ObjectId` and requires `monthlyIncome`, `incomeFrequency`, and `currency`. The `incomeFrequency` value is restricted to `monthly` or `weekly`, keeping income planning consistent across the application.
+
+The budget also contains a `categoryLimits` array. Each embedded limit stores a `category` reference and a numeric `spendingCap`. The category limit is embedded in the budget document because it belongs to that user's planning configuration; it is not a separate top-level model.
+
+### Budget CRUD and Overspending Flow
+
+The protected routes are:
+
+* `GET /api/budget`: loads the logged-in user's budget.
+* `PUT /api/budget`: creates the user's first budget or updates the existing budget with `findOneAndUpdate` and `upsert`.
+
+The authenticated user ID comes from `req.user._id`, which is populated by the existing JWT middleware. This ensures users can only read and update their own budget. Spending caps are targets rather than hard restrictions, so expenses may exceed a cap and remain valid transactions. The advisory service detects and reports those overages afterward.
+
+### Advisory and Tagging Engine
+
+`services/advisoryService.js` reads the user's current-month expense transactions and classifies each one as:
+
+* `essential`: necessities such as rent, groceries, health, transport, education, or insurance.
+* `non-essential/cut-back`: optional spending such as dining, entertainment, shopping, subscriptions, travel, or gaming.
+* `miscellaneous`: transactions that do not match either keyword group, including uncategorized bank transactions.
+
+The service aggregates totals by classification and category, compares category totals against saved spending caps, identifies overspent categories, and creates actionable cut-back advice. It never blocks, deletes, or rewrites a transaction.
+
+The protected advisory endpoint is `GET /api/budget/advisory`. It returns the current period, classification totals, category totals, overspent categories, recommendations, and classified transactions.
+
+### End-to-End Flow
+
+1. A user authenticates and receives a JWT.
+2. The frontend calls `GET /api/budget` to load the user's planning settings.
+3. The frontend calls `PUT /api/budget` to save income, frequency, currency, and category caps.
+4. The user records expenses through the existing transaction API or bank synchronization flow.
+5. The frontend calls `GET /api/budget/advisory`.
+6. The advisory service summarizes spending, reports overages, and returns financial guidance.
+
+### Team C Files
+
+* `Backend/models/Budget.js`
+* `Backend/controllers/budgetController.js`
+* `Backend/routes/budgetRoutes.js`
+* `Backend/services/advisoryService.js`
+* `Backend/controllers/advisoryController.js`
+* `Backend/tests/budgetAdvisory.test.js`
+* `Backend/app.js`
+
+This section documents the Team C budgeting and advisory task and was appended without removing the existing README documentation.
