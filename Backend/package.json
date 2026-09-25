@@ -21,7 +21,8 @@
     "express": "^5.2.1",
     "joi": "^18.2.9",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.10.1"
+    "mongoose": "^9.10.1",
+    "node-cron": "^4.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
