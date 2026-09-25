@@ -5,37 +5,39 @@
 //  all three advisory labels without requiring a running MongoDB instance.
 // ===============================================================
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
 const Budget = require('../models/Budget');
 const AdvisoryService = require('../services/advisoryService');
 
-test('budget requires income, frequency, and currency', async () => {
-  const budget = new Budget();
+describe('Budget Advisory Unit Tests', () => {
   
-  try {
-    // We await the asynchronous validation so the test doesn't read the error too early
-    await budget.validate();
-  } catch (error) {
-    assert.ok(error.errors.monthlyIncome);
-    assert.ok(error.errors.incomeFrequency);
-    assert.ok(error.errors.currency);
-  }
-});
+  it('budget requires income, frequency, and currency', async () => {
+    const budget = new Budget();
+    
+    try {
+      // We await the asynchronous validation so the test doesn't read the error too early
+      await budget.validate();
+    } catch (error) {
+      // Jest expectation syntax
+      expect(error.errors.monthlyIncome).toBeDefined();
+      expect(error.errors.incomeFrequency).toBeDefined();
+      expect(error.errors.currency).toBeDefined();
+    }
+  });
 
-test('advisory service classifies essential, cut-back, and miscellaneous spending', () => {
-  const service = new AdvisoryService();
+  it('advisory service classifies essential, cut-back, and miscellaneous spending', () => {
+    const service = new AdvisoryService();
 
-  assert.equal(
-    service.classifyTransaction({ category: { name: 'Rent' }, description: '' }),
-    'essential'
-  );
-  assert.equal(
-    service.classifyTransaction({ category: { name: 'Dining' }, description: 'Dinner' }),
-    'non-essential/cut-back'
-  );
-  assert.equal(
-    service.classifyTransaction({ category: null, description: 'Birthday gift' }),
-    'miscellaneous'
-  );
+    expect(
+      service.classifyTransaction({ category: { name: 'Rent' }, description: '' })
+    ).toBe('essential');
+    
+    expect(
+      service.classifyTransaction({ category: { name: 'Dining' }, description: 'Dinner' })
+    ).toBe('non-essential/cut-back');
+    
+    expect(
+      service.classifyTransaction({ category: null, description: 'Birthday gift' })
+    ).toBe('miscellaneous');
+  });
+
 });
