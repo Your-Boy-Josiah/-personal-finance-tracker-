@@ -8,17 +8,18 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/database");
 const { errorHandler } = require("./middleware/errorMiddleware");
+const logger = require('./utils/logger');
+const initializeCronJobs = require('./utils/cronJobs');
 
 // ==============================================================
 // ENVIRONMENT CONFIGURATION & DATABASE SETUP
 // ==============================================================
 
 dotenv.config();
-
-// Establish MongoDB connection
-connectDB();
 
 // ==============================================================
 // EXPRESS APP INITIALIZATION
@@ -27,11 +28,26 @@ connectDB();
 const app = express();
 
 // ==============================================================
-// MIDDLEWARE SETUP
+// MIDDLEWARE SETUP & SECURITY
 // ==============================================================
+
+// Secure HTTP headers
+app.use(helmet()); 
+
+// Global Rate Limiting: Max 100 requests per 15 minutes per IP
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
+  message: { 
+    success: false, 
+    message: 'Too many requests from this IP, please try again after 15 minutes.' 
+  }
+});
 
 app.use(cors()); // Enables Cross-Origin Resource Sharing for the React frontend
 app.use(express.json()); // Parses incoming JSON payloads in request bodies
+app.use("/api", apiLimiter); // Applies rate limiting to all /api routes
+app.use('/api/alerts', require('./routes/alertRoutes'));
 
 // ==============================================================
 // API ROUTES
@@ -51,7 +67,6 @@ app.use("/api/categories", require("./routes/categoryRoutes"));
 app.use("/api/transactions", require("./routes/transactionRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/bank", require("./routes/bankRoutes"));
-// Budget and Advisory budget setup, category caps, and financial advisory endpoints.
 app.use("/api/budget", require("./routes/budgetRoutes"));
 
 // ==============================================================
@@ -62,11 +77,20 @@ app.use("/api/budget", require("./routes/budgetRoutes"));
 app.use(errorHandler);
 
 // ==============================================================
-// SERVER LISTENING
+// SERVER LISTENING, DATABASE, & EXPORT
 // ==============================================================
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Prevent the real database, cron jobs, and server from starting during Jest tests
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();            // Start the real database
+  initializeCronJobs();  // Start the real cron jobs
+  
+  app.listen(PORT, () => {
+    logger.info(`Server securely running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+  });
+}
+
+// Export the app for Supertest to use in audit.test.js
+module.exports = app;

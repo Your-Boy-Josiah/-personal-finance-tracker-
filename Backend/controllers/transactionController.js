@@ -11,17 +11,44 @@ const { syncAndPersistTransactions } = require('../services/transactionServices'
 // CONTROLLER FUNCTIONS
 // ==============================================================
 
-// @desc    Get all transactions for the logged-in user
-// @route   GET /api/transactions
+// @desc    Get all transactions for the logged-in user (Paginated)
+// @route   GET /api/transactions?page=1&limit=10
 // @access  Private
 const getTransactions = async (req, res) => {
   try {
-    // Fetch transactions strictly for the authenticated user, sorted by newest first
-    const transactions = await Transaction.find({ user: req.user._id }).sort({ transactionDate: -1 });
+    // Extract query parameters with safe fallbacks (default: page 1, 10 items)
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     
-    res.status(200).json(transactions);
+    // Calculate how many documents to skip based on the current page
+    const skip = (page - 1) * limit;
+
+    // Count total documents for the frontend pagination UI
+    const totalRecords = await Transaction.countDocuments({ user: req.user._id });
+
+    // Fetch only the requested chunk of data
+    const transactions = await Transaction.find({ user: req.user._id })
+      .sort({ transactionDate: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    // Return standardized response (Rule 11 compliance) with metadata
+    res.status(200).json({
+      success: true,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalRecords / limit),
+        totalRecords,
+        limit
+      },
+      data: transactions
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error fetching transactions', error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error fetching transactions', 
+      error: error.message 
+    });
   }
 };
 
