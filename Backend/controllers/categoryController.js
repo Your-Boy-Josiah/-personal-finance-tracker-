@@ -4,9 +4,9 @@
 //  transaction categories. Ensures users only access their own categories.
 // ===============================================================
 
+const mongoose = require('mongoose');
 const Category = require('../models/Category');
-const Transaction = require('../models/Transaction'); // Required for ACID cascade
-const mongoose = require('mongoose'); // Required for database sessions
+const Transaction = require('../models/Transaction');
 
 // ==============================================================
 // CONTROLLER FUNCTIONS
@@ -22,9 +22,10 @@ const getCategories = async (req, res) => {
       $or: [{ user: req.user._id }, { user: null }]
     });
     
-    res.status(200).json(categories);
+    // Fixed: Standardized response shape
+    res.status(200).json({ success: true, data: categories });
   } catch (error) {
-    res.status(500).json({ message: 'Server error fetching categories', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error fetching categories', error: error.message });
   }
 };
 
@@ -35,22 +36,21 @@ const createCategory = async (req, res) => {
   try {
     const { name, type, color } = req.body;
 
-    // 1. Validation check
     if (!name || !type) {
-      return res.status(400).json({ message: 'Category name and type are required' });
+      return res.status(400).json({ success: false, message: 'Category name and type are required' });
     }
 
-    // 2. Create the custom category linked to the specific user
     const category = await Category.create({
       name,
       type,
-      color: color || '#000000', // Falls back to black if no color is provided
-      user: req.user._id, // This comes directly from the protect authMiddleware
+      color: color || '#000000',
+      user: req.user._id, 
     });
 
-    res.status(201).json(category);
+    // Fixed: Standardized response shape
+    res.status(201).json({ success: true, data: category });
   } catch (error) {
-    res.status(500).json({ message: 'Server error creating category', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error creating category', error: error.message });
   }
 };
 
@@ -63,46 +63,75 @@ const deleteCategory = async (req, res, next) => {
 
   try {
     const categoryId = req.params.id;
+    const userId = req.user._id;
 
-    // 1. Ensure the category exists and belongs to the active user
-    const category = await Category.findOne({ _id: categoryId, user: req.user._id });
+    // 1. Find the category and bind it to the session
+    const category = await Category.findById(categoryId).session(session);
     
+    // 2. Strict Validation Checks
     if (!category) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(404).json({ success: false, message: 'Category not found or unauthorized' });
+      return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
-    // 2. Delete the category securely within the session
+    if (category.user === null) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(403).json({ success: false, message: 'Cannot delete global system categories' });
+    }
+
+    if (category.user.toString() !== userId.toString()) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(401).json({ success: false, message: 'Not authorized to delete this category' });
+    }
+
+    // 3. Fixed: Find or create an "Uncategorized" bucket to prevent frontend crashes
+    let uncategorized = await Category.findOne({ user: userId, name: 'Uncategorized' }).session(session);
+    if (!uncategorized) {
+      const uncats = await Category.create(
+        [{ name: 'Uncategorized', type: category.type, color: '#999999', user: userId }], 
+        { session }
+      );
+      uncategorized = uncats[0];
+    }
+
+    // 4. Safely reassign orphaned transactions to the Uncategorized bucket
+    await Transaction.updateMany(
+      { category: categoryId, user: userId },
+      { $set: { category: uncategorized._id } },
+      { session }
+    );
+
+    // 5. Delete the original category
     await Category.deleteOne({ _id: categoryId }).session(session);
 
-    // 3. Reassign orphaned transactions to 'Uncategorized' (null)
-    await Transaction.updateMany(
-      { category: categoryId, user: req.user._id },
-      { $set: { category: null } }
-    ).session(session);
-
-    // 4. Commit the ACID transaction
+    // 6. Commit the ACID transaction
     await session.commitTransaction();
     session.endSession();
 
     res.status(200).json({ 
       success: true, 
-      message: 'Category deleted and transactions successfully reassigned' 
+      message: 'Category deleted and transactions successfully reassigned to Uncategorized' 
     });
 
   } catch (error) {
     // If anything fails, rollback all database changes
     await session.abortTransaction();
     session.endSession();
-    next(error);
+    
+    if (next) {
+      next(error);
+    } else {
+      res.status(500).json({ success: false, message: 'Server error during deletion cascade', error: error.message });
+    }
   }
 };
 
 // ============================================================
 // EXPORT CONTROLLERS
 // ============================================================
-
 module.exports = {
   getCategories,
   createCategory,
