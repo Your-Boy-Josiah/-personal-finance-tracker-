@@ -13,8 +13,9 @@ const errorHandler = (err, req, res, next) => {
   const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
 
   res.status(statusCode).json({
+    success: false, // Ensures consistent API response structures
     message: err.message,
-    // Only show the detailed stack trace in development mode to prevent leaking sensitive server paths
+    // Only show the detailed stack trace in development mode
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   });
 };
