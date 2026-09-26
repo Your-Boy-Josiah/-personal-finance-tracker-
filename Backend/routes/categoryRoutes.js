@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 
 // Import controller functions
-const { getCategories, createCategory } = require('../controllers/categoryController');
+const { getCategories, createCategory, deleteCategory } = require('../controllers/categoryController');
 
 // Import security middleware
 const { protect } = require('../middleware/authMiddleware');
@@ -28,6 +28,12 @@ const categorySchema = require('../validations/categorySchema');
 router.route('/')
   .get(protect, getCategories)
   .post(protect, validate(categorySchema), createCategory); // Apply validation middleware to ensure request body adheres to categorySchema
+
+// @route   DELETE /api/categories/:id
+// @desc    Delete a category and safely reassign its transactions
+// @access  Private (Requires valid JWT)
+router.route('/:id')
+  .delete(protect, deleteCategory);
 
 // ============================================================
 // EXPORT ROUTER
