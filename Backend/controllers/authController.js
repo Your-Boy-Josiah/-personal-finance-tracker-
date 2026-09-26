@@ -14,10 +14,10 @@ const User = require('../models/User');
 // HELPER FUNCTIONS
 // ==============================================================
 
-// Generates a secure JSON Web Token valid for 30 days
+// Generates a secure JSON Web Token valid for 45 minutes
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+    expiresIn: '45m',
   });
 };
 

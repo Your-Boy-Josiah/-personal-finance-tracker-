@@ -76,3 +76,63 @@ Content-Type: application/json
 GET {{baseUrl}}/budget/advisory
 Authorization: Bearer {{token}}
 
+### =========================================================================
+### 6. REGISTER NEW USER (Optional)
+### Creates a fresh account. Useful if you want to test default states.
+### =========================================================================
+
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "New",
+  "lastName": "User",
+  "email": "new.user@example.com",
+  "password": "Password123!"
+}
+
+
+### =========================================================================
+### 7. GET ALL CATEGORIES
+### Fetches default global system categories and your custom categories.
+### =========================================================================
+
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+
+### =========================================================================
+### 8. CREATE CUSTOM CATEGORY
+### Creates a new category. Copy the returned "_id" and paste it into the 
+### @categoryId variable at the top of this file to use in other requests.
+### =========================================================================
+
+POST {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Dining",
+  "type": "expense",
+  "color": "#FF5733"
+}
+
+
+### =========================================================================
+### 9. DELETE CATEGORY (ACID CASCADE TEST - TASK E-2)
+### Deletes the category matching @categoryId and safely reassigns any 
+### linked transactions to the "Uncategorized" bucket.
+### =========================================================================
+
+DELETE {{baseUrl}}/categories/{{categoryId}}
+Authorization: Bearer {{token}}
+
+
+### =========================================================================
+### 10. GET ALL TRANSACTIONS
+### Retrieves your transaction history. Run this before and after deleting 
+### a category to verify the transaction was reassigned, not deleted.
+### =========================================================================
+
+GET {{baseUrl}}/transactions
+Authorization: Bearer {{token}}
