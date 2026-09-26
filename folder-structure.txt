@@ -1,0 +1,76 @@
+-personal-finance-tracker-
+Γö£ΓöÇΓöÇ Backend
+Γöé   Γö£ΓöÇΓöÇ app.js
+Γöé   Γö£ΓöÇΓöÇ config
+Γöé   Γöé   ΓööΓöÇΓöÇ database.js
+Γöé   Γö£ΓöÇΓöÇ controllers
+Γöé   Γöé   Γö£ΓöÇΓöÇ advisoryController.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ authController.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ bankController.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ budgetController.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ categoryController.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ dashboardController.js
+Γöé   Γöé   ΓööΓöÇΓöÇ transactionController.js
+Γöé   Γö£ΓöÇΓöÇ middleware
+Γöé   Γöé   Γö£ΓöÇΓöÇ authMiddleware.js
+Γöé   Γöé   ΓööΓöÇΓöÇ errorMiddleware.js
+Γöé   Γö£ΓöÇΓöÇ models
+Γöé   Γöé   Γö£ΓöÇΓöÇ Budget.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ Category.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ Transaction.js
+Γöé   Γöé   ΓööΓöÇΓöÇ User.js
+Γöé   Γö£ΓöÇΓöÇ package-lock.json
+Γöé   Γö£ΓöÇΓöÇ package.json
+Γöé   Γö£ΓöÇΓöÇ routes
+Γöé   Γöé   Γö£ΓöÇΓöÇ authRoutes.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ bankRoutes.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ budgetRoutes.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ categoryRoutes.js
+Γöé   Γöé   Γö£ΓöÇΓöÇ dashboardRoutes.js
+Γöé   Γöé   ΓööΓöÇΓöÇ transactionRoutes.js
+Γöé   Γö£ΓöÇΓöÇ services
+Γöé   Γöé   Γö£ΓöÇΓöÇ advisoryService.js
+Γöé   Γöé   ΓööΓöÇΓöÇ transactionServices.js
+Γöé   Γö£ΓöÇΓöÇ tests
+Γöé   Γöé   Γö£ΓöÇΓöÇ auth.test.js
+Γöé   Γöé   ΓööΓöÇΓöÇ budgetAdvisory.test.js
+Γöé   Γö£ΓöÇΓöÇ utils
+Γöé   Γöé   ΓööΓöÇΓöÇ validate.js
+Γöé   ΓööΓöÇΓöÇ validations
+Γöé       Γö£ΓöÇΓöÇ authSchema.js
+Γöé       Γö£ΓöÇΓöÇ budgetSchema.js
+Γöé       Γö£ΓöÇΓöÇ categorySchema.js
+Γöé       ΓööΓöÇΓöÇ transactionSchema.js
+Γö£ΓöÇΓöÇ CLIENT-Test.rest
+Γö£ΓöÇΓöÇ Frontend
+Γöé   Γö£ΓöÇΓöÇ README.md
+Γöé   Γö£ΓöÇΓöÇ eslint.config.js
+Γöé   Γö£ΓöÇΓöÇ index.html
+Γöé   Γö£ΓöÇΓöÇ package-lock.json
+Γöé   Γö£ΓöÇΓöÇ package.json
+Γöé   Γö£ΓöÇΓöÇ public
+Γöé   Γöé   Γö£ΓöÇΓöÇ favicon.svg
+Γöé   Γöé   ΓööΓöÇΓöÇ icons.svg
+Γöé   Γö£ΓöÇΓöÇ src
+Γöé   Γöé   Γö£ΓöÇΓöÇ App.css
+Γöé   Γöé   Γö£ΓöÇΓöÇ App.jsx
+Γöé   Γöé   Γö£ΓöÇΓöÇ assets
+Γöé   Γöé   Γöé   Γö£ΓöÇΓöÇ hero.png
+Γöé   Γöé   Γöé   Γö£ΓöÇΓöÇ react.svg
+Γöé   Γöé   Γöé   ΓööΓöÇΓöÇ vite.svg
+Γöé   Γöé   Γö£ΓöÇΓöÇ components
+Γöé   Γöé   Γöé   ΓööΓöÇΓöÇ ProtectedRoute.jsx
+Γöé   Γöé   Γö£ΓöÇΓöÇ context
+Γöé   Γöé   Γöé   ΓööΓöÇΓöÇ AuthContext.jsx
+Γöé   Γöé   Γö£ΓöÇΓöÇ index.css
+Γöé   Γöé   Γö£ΓöÇΓöÇ main.jsx
+Γöé   Γöé   Γö£ΓöÇΓöÇ pages
+Γöé   Γöé   Γöé   Γö£ΓöÇΓöÇ Login.jsx
+Γöé   Γöé   Γöé   ΓööΓöÇΓöÇ Register.jsx
+Γöé   Γöé   ΓööΓöÇΓöÇ services
+Γöé   Γöé       ΓööΓöÇΓöÇ api.js
+Γöé   ΓööΓöÇΓöÇ vite.config.js
+Γö£ΓöÇΓöÇ README.md
+Γö£ΓöÇΓöÇ docs
+Γöé   ΓööΓöÇΓöÇ bank-integration.md
+ΓööΓöÇΓöÇ folder-structure.txt

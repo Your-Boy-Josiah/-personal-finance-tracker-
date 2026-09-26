@@ -1,83 +1,39 @@
-### Personal-Finance-Tracker
-Capstone Project for TS Academy 
+# Personal Finance Tracker - Backend API
 
-## Initial Backend Setup & Architecture
-* **Directory Scaffolding:** Configured modular backend hierarchy
- (`config`, `controllers`, `middleware`, `models`, `routes`, `services`, `tests`, `utils`).
+A complete, production-ready RESTful backend for a Personal Finance Tracker. Built with Express.js and MongoDB, this API handles secure user authentication, complex financial data aggregations, strict budgeting rules, and intelligent financial advisory.
 
-* **Environment Setup:** Initialized Node runtime configuration (`package.json`), environment variables template (`.env`), and repository hygiene rules (`.gitignore`).
+## 🏗 Process Workflow & Architecture
 
-* **Mongoose Models:**
-  * `User.js`: Schema with authentication lookups, soft-delete flag, and virtual `fullName`.
-  * `Transaction.js`: Financial entry tracking with user references, indexing for queries/reports, and dynamic `formattedAmount` virtual.
-  * Applied uniform JSDoc/block comment architecture across models.
+The backend was developed through a modular, feature-based workflow, ensuring high test coverage and strict data integrity. 
 
-## What is in the NEW COMMIT
-# A more complete Backend Architecture
+1. **Environment & Scaffolding:** Configured the Node runtime, environment variables, and modular directory structure (`controllers`, `models`, `routes`, `middleware`, `services`).
+2. **Database & Data Modeling:** Implemented Mongoose v8 schemas for `User`, `Category`, `Transaction`, and `Budget`, utilizing relational ObjectIds, virtuals (e.g., `formattedAmount`), and block-comment architecture.
+3. **Security & Authentication:** Built a robust JWT authentication flow with bcryptjs password hashing and custom middleware to protect private routes and reject soft-deleted accounts.
+4. **Core CRUD & Routing:** Developed RESTful endpoints for Category management and Transaction logging.
+5. **Advanced Data Operations:** Implemented MongoDB Aggregation Pipelines to offload heavy dashboard math to the database, and utilized Mongoose Replica Sets/Sessions to handle ACID-compliant cascading deletes.
+6. **Testing & QA:** Verified all endpoints via Jest automated tests and manual REST Client verification.
 
-## Core API, Security, & Features (Recent Updates)
-* **Authentication & Security:** 
-  * Implemented JWT (JSON Web Token) generation and verification.
-  * Integrated `bcryptjs` for secure password hashing during user registration.
-  * Built public `register` and `login` endpoints in `authController.js`.
+## ⚙️ Core Features & Capabilities
 
-* **Custom Middleware:**
-  * `authMiddleware.js`: Protects private routes by extracting/verifying Bearer tokens, mapping the active user, and immediately blocking requests from soft-deleted accounts.
-  * `errorMiddleware.js`: Overrides default Express HTML errors with structured JSON responses, safely hiding stack traces in production.
+### Security & Error Handling
+* **JWT Authentication:** Secure token generation and validation for all private routes.
+* **Custom Middleware:** 
+  * `authMiddleware.js`: Validates Bearer tokens and maps the active user to the request.
+  * `errorMiddleware.js`: Overrides Express default errors with structured, production-safe JSON responses.
 
-* **Schema Enhancements:**
-  * Upgraded `User.js` with production-ready fields including `role` (user/admin), `baseCurrency` preference, and account recovery infrastructure.
-  * Created `Category.js`: Supports both global default categories (user: null) and custom user-specific categories.
-  * Refactored `Transaction.js`: Converted the `category` field from a String to a relational `ObjectId`, linking directly to the Category model to unlock Mongoose `.populate()`.
+### Financial Transactions & Categories
+* **Category Engine:** Supports immutable global default categories alongside custom, user-defined categories.
+* **Transaction Tracking:** Logs income and expenses. The `category` field is a relational `ObjectId` linking directly to the Category model, enabling Mongoose `.populate()`.
+* **ACID Cascading Deletes:** If a category is deleted, a MongoDB transaction safely intercepts all orphaned financial entries and reassigns them to an "Uncategorized" bucket to preserve financial history.
 
-* **RESTful Controllers & Routes:**
-  * Completed fully protected CRUD operations for Categories (`categoryController.js`).
-  * Completed fully protected CRUD operations for Transactions (`transactionController.js`).
-  * Mounted all endpoint groups cleanly inside `app.js`.
+### Dashboard & Aggregations
+* **Database-Level Math:** The `/api/dashboard/summary` endpoint utilizes native MongoDB Aggregation Pipelines to calculate total income, total expenses, and net balance. This ensures high performance and server stability regardless of transaction volume.
 
-* **Dashboard & Analytics:**
-  * Created `dashboardController.js` utilizing **MongoDB Aggregation Pipelines**.
-  * Offloads heavy math to the database to calculate total income, total expenses, and net balance efficiently, ensuring server stability as transaction volumes grow.
+### Budgeting & Advisory Engine
+* **Dynamic Budgeting:** Users can establish a `monthlyIncome`, `incomeFrequency`, and assign targeted `spendingCap` limits to specific categories.
+* **Automated Classification:** The `advisoryService.js` engine reads the current month's expenses and automatically classifies them into `essential`, `non-essential/cut-back`, or `miscellaneous` buckets.
+* **Gamified Advisory:** The engine compares real-time category totals against saved spending caps. It identifies overages and generates actionable financial guidance without ever mutating or blocking the original transactions.
 
-## Budgeting & Advisory Task
+## 🧪 API Testing & Integration
 
-This task adds a separate budgeting and financial advisory layer while preserving the existing transaction and bank-sync flows.
-
-### Budget Schema and Frequency Setup
-
-`models/Budget.js` stores one budget document per authenticated user. It references `User` through an `ObjectId` and requires `monthlyIncome`, `incomeFrequency`, and `currency`. The `incomeFrequency` value is restricted to `monthly` or `weekly`, keeping income planning consistent across the application.
-
-The budget also contains a `categoryLimits` array. Each embedded limit stores a `category` reference and a numeric `spendingCap`. The category limit is embedded in the budget document because it belongs to that user's planning configuration; it is not a separate top-level model.
-
-### Budget CRUD and Overspending Flow
-
-The protected routes are:
-
-* `GET /api/budget`: loads the logged-in user's budget.
-* `PUT /api/budget`: creates the user's first budget or updates the existing budget with `findOneAndUpdate` and `upsert`.
-
-The authenticated user ID comes from `req.user._id`, which is populated by the existing JWT middleware. This ensures users can only read and update their own budget. Spending caps are targets rather than hard restrictions, so expenses may exceed a cap and remain valid transactions. The advisory service detects and reports those overages afterward.
-
-### Advisory and Tagging Engine
-
-`services/advisoryService.js` reads the user's current-month expense transactions and classifies each one as:
-
-* `essential`: necessities such as rent, groceries, health, transport, education, or insurance.
-* `non-essential/cut-back`: optional spending such as dining, entertainment, shopping, subscriptions, travel, or gaming.
-* `miscellaneous`: transactions that do not match either keyword group, including uncategorized bank transactions.
-
-The service aggregates totals by classification and category, compares category totals against saved spending caps, identifies overspent categories, and creates actionable cut-back advice. It never blocks, deletes, or rewrites a transaction.
-
-The protected advisory endpoint is `GET /api/budget/advisory`. It returns the current period, classification totals, category totals, overspent categories, recommendations, and classified transactions.
-
-### End-to-End Flow
-
-1. A user authenticates and receives a JWT.
-2. The frontend calls `GET /api/budget` to load the user's planning settings.
-3. The frontend calls `PUT /api/budget` to save income, frequency, currency, and category caps.
-4. The user records expenses through the existing transaction API or bank synchronization flow.
-5. The frontend calls `GET /api/budget/advisory`.
-6. The advisory service summarizes spending, reports overages, and returns financial guidance.
-
-### API Testing
-For detailed API request payloads and testing flows, please refer to the `CLIENT-Test.rest` file included in the root directory.
+The backend is fully verified. A comprehensive `CLIENT-Test.rest` file is included in the root directory. It contains parameterized HTTP requests for testing the entire user lifecycle, from registration and JWT generation to budget capping and transaction cascading, using the VS Code REST Client extension.

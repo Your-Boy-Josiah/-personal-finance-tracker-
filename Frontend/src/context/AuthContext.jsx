@@ -4,16 +4,20 @@ import api from "../services/api";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // Load any saved session on first render, so a page refresh
-  // doesn't log the user out.
+  // Safely initialize state and prevent JSON parsing crashes
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("user");
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem("user");
+      return saved && saved !== "undefined" ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   function saveSession(token, userData) {
+    if (!token) return;
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
@@ -24,14 +28,16 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       const res = await api.post("/auth/login", { email, password });
-      // Adjust these keys to match your backend's actual response shape,
-      // e.g. res.data.data.token / res.data.data.user
-      const { token, ...userData } = res.data;
+      
+      // Smart extraction: handles both standard { token, user } and nested { data: { token, user } }
+      const payload = res.data.data || res.data;
+      const token = payload.token || payload.accessToken;
+      const userData = payload.user || payload;
+      
       saveSession(token, userData);
       return { success: true };
     } catch (err) {
-      const message =
-        err.response?.data?.message || "Invalid email or password";
+      const message = err.response?.data?.message || "Invalid email or password";
       setError(message);
       return { success: false, message };
     } finally {
@@ -44,7 +50,11 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       const res = await api.post("/auth/register", formData);
-      const { token, ...userData } = res.data;
+      
+      const payload = res.data.data || res.data;
+      const token = payload.token || payload.accessToken;
+      const userData = payload.user || payload;
+      
       saveSession(token, userData);
       return { success: true };
     } catch (err) {
@@ -63,9 +73,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider
-      value={{ user, loading, error, login, register, logout }}
-    >
+    <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -73,8 +81,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used inside an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used inside an AuthProvider");
   return context;
 }

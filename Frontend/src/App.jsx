@@ -1,30 +1,39 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-// import Dashboard from "./pages/Dashboard"; // build this next
-
-function Dashboard() {
-  return <h1>Dashboard (placeholder — build this next)</h1>;
-}
+import Dashboard from "./pages/Dashboard";
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route
-            path="/dashboard"
+
+          {/* Protected Routes (Wrapped in Layout Sidebar) */}
+          <Route 
+            path="/" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <Layout />
               </ProtectedRoute>
             }
-          />
+          >
+            {/* The "index" route means this loads exactly at "/" */}
+            <Route index element={<Dashboard />} />
+            
+            {/* We will build these placeholders next */}
+            {/* <Route path="transactions" element={<Transactions />} /> */}
+            {/* <Route path="budget" element={<Budget />} /> */}
+          </Route>
+
+          {/* Catch-all route for invalid URLs */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
