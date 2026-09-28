@@ -28,6 +28,7 @@ const getTransactions = async (req, res) => {
 
     // Fetch only the requested chunk of data
     const transactions = await Transaction.find({ user: req.user._id })
+      .populate('category', 'name type')
       .sort({ transactionDate: -1 })
       .skip(skip)
       .limit(limit);

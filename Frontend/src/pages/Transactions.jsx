@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import api from "../services/api";
 
 const getToday = () => {
@@ -14,6 +22,19 @@ const emptyForm = () => ({
   category: "",
   description: "",
   transactionDate: getToday(),
+});
+
+const transactionToForm = (transaction) => ({
+  type: transaction.type || "expense",
+  amount: String(transaction.amount ?? ""),
+  category:
+    typeof transaction.category === "object"
+      ? transaction.category?._id || ""
+      : transaction.category || "",
+  description: transaction.description || "",
+  transactionDate: transaction.transactionDate
+    ? new Date(transaction.transactionDate).toISOString().slice(0, 10)
+    : getToday(),
 });
 
 const formatDate = (value) => {
@@ -36,6 +57,11 @@ const formatAmount = (amount) =>
     maximumFractionDigits: 2,
   }).format(Number(amount) || 0);
 
+const fetchTransactionCategories = async () => {
+  const response = await api.get("/categories");
+  return response.data.data || [];
+};
+
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [pagination, setPagination] = useState({
@@ -53,6 +79,20 @@ const Transactions = () => {
   const [formError, setFormError] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [dialogMode, setDialogMode] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const refreshCategories = async () => {
+    try {
+      setCategories(await fetchTransactionCategories());
+      setCategoriesError("");
+    } catch (requestError) {
+      setCategoriesError(
+        requestError.response?.data?.message || "Couldn't load categories.",
+      );
+    }
+  };
 
   useEffect(() => {
     let isCurrent = true;
@@ -94,8 +134,8 @@ const Transactions = () => {
 
     const loadCategories = async () => {
       try {
-        const response = await api.get("/categories");
-        if (isCurrent) setCategories(response.data.data || []);
+        const availableCategories = await fetchTransactionCategories();
+        if (isCurrent) setCategories(availableCategories);
       } catch (requestError) {
         if (isCurrent) {
           setCategoriesError(
@@ -134,9 +174,63 @@ const Transactions = () => {
     }
   };
 
-  const matchingCategories = categories.filter(
-    (category) => category.type === form.type,
-  );
+  const openTransactionDialog = (transaction, mode) => {
+    setSelectedTransaction(transaction);
+    setForm(transactionToForm(transaction));
+    setFormError("");
+    setDialogMode(mode);
+    refreshCategories();
+  };
+
+  const closeTransactionDialog = () => {
+    setDialogMode("");
+    setSelectedTransaction(null);
+    setFormError("");
+  };
+
+  const handleUpdateTransaction = async (event) => {
+    event.preventDefault();
+    if (!selectedTransaction) return;
+
+    setFormError("");
+    setIsSaving(true);
+    try {
+      await api.put(`/transactions/${selectedTransaction._id}`, {
+        ...form,
+        amount: Number(form.amount),
+      });
+      closeTransactionDialog();
+      setRefreshKey((key) => key + 1);
+    } catch (requestError) {
+      setFormError(
+        requestError.response?.data?.message || "Couldn't update this transaction.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!selectedTransaction) return;
+
+    setFormError("");
+    setIsDeleting(true);
+    try {
+      await api.delete(`/transactions/${selectedTransaction._id}`);
+      closeTransactionDialog();
+      if (transactions.length === 1 && page > 1) {
+        setPage((currentPage) => currentPage - 1);
+      } else {
+        setRefreshKey((key) => key + 1);
+      }
+    } catch (requestError) {
+      setFormError(
+        requestError.response?.data?.message || "Couldn't delete this transaction.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="mx-auto min-h-full max-w-7xl bg-slate-50 p-4 text-slate-900 dark:bg-black dark:text-neutral-100 sm:p-6 lg:p-8">
@@ -158,7 +252,9 @@ const Transactions = () => {
             type="button"
             onClick={() => {
               setFormError("");
+              setForm(emptyForm());
               setIsFormOpen(true);
+              refreshCategories();
             }}
             className="inline-flex shrink-0 items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
           >
@@ -188,7 +284,7 @@ const Transactions = () => {
               <select
                 id="transaction-type"
                 value={form.type}
-                onChange={(event) => setForm({ ...form, type: event.target.value, category: "" })}
+                onChange={(event) => setForm({ ...form, type: event.target.value })}
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
               >
                 <option value="expense">Expense</option>
@@ -219,9 +315,9 @@ const Transactions = () => {
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
               >
                 <option value="" disabled>
-                  {categoriesError ? "Categories unavailable" : matchingCategories.length ? "Select a category" : "No matching categories"}
+                  {categoriesError ? "Categories unavailable" : categories.length ? "Select a category" : "No categories available"}
                 </option>
-                {matchingCategories.map((category) => (
+                {categories.map((category) => (
                   <option key={category._id} value={category._id}>{category.name}</option>
                 ))}
               </select>
@@ -254,7 +350,7 @@ const Transactions = () => {
             <div className="flex justify-end sm:col-span-2 lg:col-span-3">
               <button
                 type="submit"
-                disabled={isSaving || matchingCategories.length === 0}
+                disabled={isSaving || categories.length === 0}
                 className="rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
               >
                 {isSaving ? "Saving..." : "Save transaction"}
@@ -262,6 +358,200 @@ const Transactions = () => {
             </div>
           </form>
         </section>
+      )}
+
+      {dialogMode && selectedTransaction && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeTransactionDialog();
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="transaction-dialog-heading"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-xl dark:border-neutral-700 dark:bg-neutral-950 sm:p-6"
+          >
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 id="transaction-dialog-heading" className="text-lg font-semibold">
+                {dialogMode === "view"
+                  ? "Transaction details"
+                  : dialogMode === "edit"
+                    ? "Edit transaction"
+                    : "Delete transaction?"}
+              </h2>
+              <button
+                type="button"
+                onClick={closeTransactionDialog}
+                aria-label="Close transaction dialog"
+                className="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {dialogMode === "view" && (
+              <>
+                <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-medium uppercase text-slate-500 dark:text-neutral-400">Description</dt>
+                    <dd className="mt-1 wrap-break-word text-sm font-medium">
+                      {selectedTransaction.description || selectedTransaction.merchant || "Transaction"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium uppercase text-slate-500 dark:text-neutral-400">Amount</dt>
+                    <dd className="mt-1 text-sm font-semibold">{formatAmount(selectedTransaction.amount)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium uppercase text-slate-500 dark:text-neutral-400">Type</dt>
+                    <dd className="mt-1 text-sm capitalize">{selectedTransaction.type}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium uppercase text-slate-500 dark:text-neutral-400">Category</dt>
+                    <dd className="mt-1 text-sm">
+                      {selectedTransaction.category?.name ||
+                        categories.find((category) => category._id === form.category)?.name ||
+                        (selectedTransaction.category ? "Categorized" : "Uncategorized")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium uppercase text-slate-500 dark:text-neutral-400">Date</dt>
+                    <dd className="mt-1 text-sm">
+                      {formatDate(selectedTransaction.transactionDate || selectedTransaction.createdAt)}
+                    </dd>
+                  </div>
+                  {selectedTransaction.bankName && (
+                    <div>
+                      <dt className="text-xs font-medium uppercase text-slate-500 dark:text-neutral-400">Bank</dt>
+                      <dd className="mt-1 text-sm">{selectedTransaction.bankName}</dd>
+                    </div>
+                  )}
+                </dl>
+                <div className="mt-6 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDialogMode("delete")}
+                    className="inline-flex items-center gap-2 rounded-md border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                  >
+                    <Trash2 size={16} /> Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormError("");
+                      setDialogMode("edit");
+                    }}
+                    className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  >
+                    <Pencil size={16} /> Edit
+                  </button>
+                </div>
+              </>
+            )}
+
+            {dialogMode === "edit" && (
+              <form onSubmit={handleUpdateTransaction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="edit-transaction-type" className="mb-1.5 block text-sm font-medium">Type</label>
+                  <select
+                    id="edit-transaction-type"
+                    value={form.type}
+                    onChange={(event) => setForm({ ...form, type: event.target.value })}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  >
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="edit-transaction-amount" className="mb-1.5 block text-sm font-medium">Amount</label>
+                  <input
+                    id="edit-transaction-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    value={form.amount}
+                    onChange={(event) => setForm({ ...form, amount: event.target.value })}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-transaction-category" className="mb-1.5 block text-sm font-medium">Category</label>
+                  <select
+                    id="edit-transaction-category"
+                    required
+                    value={form.category}
+                    onChange={(event) => setForm({ ...form, category: event.target.value })}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  >
+                    <option value="" disabled>
+                      {categoriesError ? "Categories unavailable" : categories.length ? "Select a category" : "No categories available"}
+                    </option>
+                    {categories.map((category) => (
+                      <option key={category._id} value={category._id}>{category.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="edit-transaction-date" className="mb-1.5 block text-sm font-medium">Date</label>
+                  <input
+                    id="edit-transaction-date"
+                    type="date"
+                    required
+                    value={form.transactionDate}
+                    onChange={(event) => setForm({ ...form, transactionDate: event.target.value })}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="edit-transaction-description" className="mb-1.5 block text-sm font-medium">Description</label>
+                  <input
+                    id="edit-transaction-description"
+                    type="text"
+                    maxLength={255}
+                    value={form.description}
+                    onChange={(event) => setForm({ ...form, description: event.target.value })}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  />
+                </div>
+                {formError && <p className="text-sm text-rose-600 dark:text-rose-400 sm:col-span-2" role="alert">{formError}</p>}
+                <div className="flex justify-end gap-2 sm:col-span-2">
+                  <button type="button" onClick={() => setDialogMode("view")} className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-neutral-700">Cancel</button>
+                  <button
+                    type="submit"
+                    disabled={isSaving || categories.length === 0}
+                    className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  >
+                    {isSaving ? "Saving..." : "Save changes"}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {dialogMode === "delete" && (
+              <div>
+                <p className="text-sm text-slate-600 dark:text-neutral-300">
+                  Delete “{selectedTransaction.description || selectedTransaction.merchant || "Transaction"}”? This cannot be undone.
+                </p>
+                {formError && <p className="mt-3 text-sm text-rose-600 dark:text-rose-400" role="alert">{formError}</p>}
+                <div className="mt-6 flex justify-end gap-2">
+                  <button type="button" onClick={() => setDialogMode("view")} className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-neutral-700">Cancel</button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteTransaction}
+                    disabled={isDeleting}
+                    className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete transaction"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-[#0a0a0a]" aria-label="Transaction list">
@@ -291,6 +581,7 @@ const Transactions = () => {
                     <th scope="col" className="px-5 py-3 font-medium">Category</th>
                     <th scope="col" className="px-5 py-3 font-medium">Type</th>
                     <th scope="col" className="px-5 py-3 text-right font-medium">Amount</th>
+                    <th scope="col" className="px-5 py-3 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
@@ -298,8 +589,14 @@ const Transactions = () => {
                     const isIncome = transaction.type === "income";
                     const description =
                       transaction.description || transaction.merchant || "Transaction";
-                    const category = transaction.category?.name ||
-                      (transaction.category ? "Categorized" : "Uncategorized");
+                    const categoryId =
+                      typeof transaction.category === "object"
+                        ? transaction.category?._id
+                        : transaction.category;
+                    const category =
+                      transaction.category?.name ||
+                      categories.find((item) => String(item._id) === String(categoryId))?.name ||
+                      (categoryId ? "Unknown category" : "Uncategorized");
 
                     return (
                       <tr key={transaction._id} className="transition-colors hover:bg-slate-50 dark:hover:bg-neutral-900/60">
@@ -322,6 +619,37 @@ const Transactions = () => {
                         </td>
                         <td className={`whitespace-nowrap px-5 py-4 text-right font-semibold ${isIncome ? "text-emerald-700 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
                           {isIncome ? "+" : "−"}{formatAmount(transaction.amount)}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-right">
+                          <div className="flex justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openTransactionDialog(transaction, "view")}
+                              aria-label={`View ${description}`}
+                              title="View transaction"
+                              className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openTransactionDialog(transaction, "edit")}
+                              aria-label={`Edit ${description}`}
+                              title="Edit transaction"
+                              className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openTransactionDialog(transaction, "delete")}
+                              aria-label={`Delete ${description}`}
+                              title="Delete transaction"
+                              className="rounded-md p-2 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
