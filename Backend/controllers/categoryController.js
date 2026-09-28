@@ -22,7 +22,7 @@ const getCategories = async (req, res) => {
       $or: [{ user: req.user._id }, { user: null }]
     });
     
-    // Fixed: Standardized response shape
+    // Standardized response shape
     res.status(200).json({ success: true, data: categories });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error fetching categories', error: error.message });
@@ -47,7 +47,7 @@ const createCategory = async (req, res) => {
       user: req.user._id, 
     });
 
-    // Fixed: Standardized response shape
+    // Standardized response shape
     res.status(201).json({ success: true, data: category });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error creating category', error: error.message });
@@ -87,8 +87,13 @@ const deleteCategory = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized to delete this category' });
     }
 
-    // 3. Fixed: Find or create an "Uncategorized" bucket to prevent frontend crashes
-    let uncategorized = await Category.findOne({ user: userId, name: 'Uncategorized' }).session(session);
+    // 3. FIXED: Find or create an "Uncategorized" bucket matching the TYPE of the deleted category
+    let uncategorized = await Category.findOne({ 
+      user: userId, 
+      name: 'Uncategorized',
+      type: category.type // Security fix: don't mix income and expenses
+    }).session(session);
+
     if (!uncategorized) {
       const uncats = await Category.create(
         [{ name: 'Uncategorized', type: category.type, color: '#999999', user: userId }], 
@@ -97,7 +102,7 @@ const deleteCategory = async (req, res, next) => {
       uncategorized = uncats[0];
     }
 
-    // 4. Safely reassign orphaned transactions to the Uncategorized bucket
+    // 4. Safely reassign orphaned transactions to the matching Uncategorized bucket
     await Transaction.updateMany(
       { category: categoryId, user: userId },
       { $set: { category: uncategorized._id } },
