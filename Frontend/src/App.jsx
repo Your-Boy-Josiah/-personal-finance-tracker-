@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Transactions from "./pages/Transactions";
 
 export default function App() {
   return (
@@ -14,7 +15,6 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
           {/* Protected Routes (Wrapped in Layout Sidebar) */}
           <Route 
             path="/" 
@@ -26,6 +26,7 @@ export default function App() {
           >
             {/* The "index" route means this loads exactly at "/" */}
             <Route index element={<Dashboard />} />
+            <Route path="transactions" element={<Transactions />} />
             
             {/* We will build these placeholders next */}
             {/* <Route path="transactions" element={<Transactions />} /> */}

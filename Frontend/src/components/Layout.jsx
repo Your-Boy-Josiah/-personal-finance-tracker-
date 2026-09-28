@@ -16,22 +16,27 @@ import {
 export default function Layout() {
   const { logout } = useAuth();
   const location = useLocation();
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isDark, setIsDark] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() =>
+    window.matchMedia("(min-width: 768px)").matches,
+  );
+  const [isDark, setIsDark] = useState(() => {
+    const savedTheme = localStorage.getItem("monie-track-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return savedTheme === "dark" || (!savedTheme && prefersDark);
+  });
+
+  useEffect(() => {
+    const viewportQuery = window.matchMedia("(min-width: 768px)");
+    const updateSidebar = (event) => setIsExpanded(event.matches);
+
+    viewportQuery.addEventListener("change", updateSidebar);
+    return () => viewportQuery.removeEventListener("change", updateSidebar);
+  }, []);
   
   // Initialize theme on first load
   useEffect(() => {
-    const savedTheme = localStorage.getItem('monie-track-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
   // FORCEFUL TOGGLE FUNCTION
   const toggleTheme = () => {
@@ -59,9 +64,15 @@ export default function Layout() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-black flex w-full transition-colors duration-200">
-      <aside className={`${isExpanded ? 'w-64' : 'w-20'} bg-[#0f2923] dark:bg-[#050505] dark:border-r dark:border-neutral-800 text-white flex flex-col shadow-xl shrink-0 transition-all duration-300 relative z-20`}>
-        <button onClick={() => setIsExpanded(!isExpanded)} className="absolute -right-3 top-6 bg-emerald-500 text-white rounded-full p-1 shadow-md hover:bg-emerald-400 transition-colors">
+    <div className="flex min-h-screen w-full bg-slate-50 transition-colors duration-200 dark:bg-black">
+      <aside className={`${isExpanded ? 'w-64' : 'w-16 md:w-20'} sticky top-0 z-20 flex h-screen shrink-0 flex-col bg-[#0f2923] text-white shadow-xl transition-all duration-300 dark:border-r dark:border-neutral-800 dark:bg-[#050505]`}>
+        <button
+          type="button"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+          title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+          className="absolute -right-3 top-6 z-10 rounded-full bg-emerald-500 p-1 text-white shadow-md transition-colors hover:bg-emerald-400"
+        >
           {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
 
@@ -101,7 +112,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="flex-1 h-screen overflow-y-auto text-slate-900 dark:text-neutral-100">
+      <main className="h-screen min-w-0 flex-1 overflow-y-auto text-slate-900 dark:text-neutral-100">
         <Outlet />
       </main>
     </div>
