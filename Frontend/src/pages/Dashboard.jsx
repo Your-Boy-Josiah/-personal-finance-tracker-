@@ -3,13 +3,41 @@
 //  High-density financial overview with strict data mapping.
 // ===============================================================
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
-import { Plus, ArrowRight, Calendar, TrendingUp } from "lucide-react";
+import { Plus, ArrowRight, Calendar, TrendingUp, AlertCircle } from "lucide-react";
 
 const COLORS = ['#8b5cf6', '#10b981', '#f59e0b', '#3b82f6', '#f43f5e'];
+
+// PERF FIX: Memoized Bar Chart prevents re-renders when other dashboard state changes
+const MemoizedBarChart = React.memo(({ data, formatYAxis }) => (
+  <ResponsiveContainer width="100%" height="85%">
+    <BarChart data={data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
+      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.2} />
+      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#737373' }} />
+      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#737373' }} tickFormatter={formatYAxis} width={50} />
+      <Tooltip cursor={{ fill: 'rgba(115, 115, 115, 0.1)' }} contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', backgroundColor: '#171717', color: '#fff' }} />
+      <Bar dataKey="income" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+      <Bar dataKey="expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+    </BarChart>
+  </ResponsiveContainer>
+));
+
+// PERF FIX: Memoized Pie Chart
+const MemoizedPieChart = React.memo(({ data, isEmpty }) => (
+  <ResponsiveContainer width="100%" height="85%">
+    <PieChart>
+      <Pie data={data} innerRadius={65} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
+        {data.map((entry, index) => (
+          <Cell key={`cell-${index}`} fill={isEmpty ? '#262626' : (entry.color || COLORS[index % COLORS.length])} />
+        ))}
+      </Pie>
+      {!isEmpty && <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', backgroundColor: '#171717', color: '#fff' }} />}
+    </PieChart>
+  </ResponsiveContainer>
+));
 
 export default function Dashboard() {
   const [summary, setSummary] = useState(null);
@@ -19,7 +47,9 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const res = await api.get("/dashboard/summary");
+        // PERF/BUG FIX: Pass actual browser timezone to backend
+        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const res = await api.get(`/dashboard/summary?timezone=${userTz}`);
         setSummary(res.data.data || res.data);
       } catch (err) {
         setError("Failed to load dashboard data.");
@@ -53,9 +83,11 @@ export default function Dashboard() {
     return value;
   };
 
-  // Mock budget limit calculation for the example text
-  const mockLimit = 1000000;
-  const budgetPercentage = Math.round(Math.min((expenses / mockLimit) * 100, 100));
+  // BUG FIX: Real Budget Logic
+  const realBudgetLimit = summary?.totalBudgetLimit || 0;
+  const hasBudgetLimit = realBudgetLimit > 0;
+  const budgetPercentage = hasBudgetLimit ? Math.round(Math.min((expenses / realBudgetLimit) * 100, 100)) : 0;
+  const isOverBudget = budgetPercentage >= 100;
 
   return (
     <div className="p-4 md:p-6 mx-auto max-w-[1600px]">
@@ -64,15 +96,6 @@ export default function Dashboard() {
         <div>
           <h1 className="text-xl font-bold dark:text-white">Financial overview</h1>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">Track income, spending and account growth.</p>
-        </div>
-        <div className="flex items-center gap-2 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-neutral-800 rounded-lg px-3 py-1.5 shadow-sm hover:border-emerald-500/50 transition-colors cursor-pointer">
-          <Calendar size={14} className="text-slate-500 dark:text-neutral-400" />
-          <select className="bg-transparent text-sm font-medium dark:text-white outline-none cursor-pointer">
-            <option>This Month</option>
-            <option>Last Month</option>
-            <option>Last 3 Months</option>
-            <option>This Year</option>
-          </select>
         </div>
       </div>
 
@@ -102,30 +125,12 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm h-[300px] hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
               <h3 className="text-sm font-bold mb-4 dark:text-white">Revenue & expenses</h3>
-              <ResponsiveContainer width="100%" height="85%">
-                <BarChart data={barData} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.2} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#737373' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#737373' }} tickFormatter={formatYAxis} width={50} />
-                  <Tooltip cursor={{ fill: 'rgba(115, 115, 115, 0.1)' }} contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', backgroundColor: '#171717', color: '#fff' }} />
-                  <Bar dataKey="income" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
+              <MemoizedBarChart data={barData} formatYAxis={formatYAxis} />
             </div>
             
             <div className="bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm h-[300px] relative hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
               <h3 className="text-sm font-bold mb-4 dark:text-white">Expenses by Category</h3>
-              <ResponsiveContainer width="100%" height="85%">
-                <PieChart>
-                  <Pie data={categoryData} innerRadius={65} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={isCategoryEmpty ? '#262626' : (entry.color || COLORS[index % COLORS.length])} />
-                    ))}
-                  </Pie>
-                  {!isCategoryEmpty && <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', backgroundColor: '#171717', color: '#fff' }} />}
-                </PieChart>
-              </ResponsiveContainer>
+              <MemoizedPieChart data={categoryData} isEmpty={isCategoryEmpty} />
               {isCategoryEmpty && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none pt-8">
                   <span className="text-xs text-neutral-500">No category data.</span>
@@ -137,7 +142,7 @@ export default function Dashboard() {
           <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
             <div className="p-4 border-b border-slate-100 dark:border-neutral-800 flex justify-between items-center">
               <h3 className="text-sm font-bold dark:text-white">Recent transactions</h3>
-              <button className="text-indigo-600 dark:text-indigo-400 text-xs font-medium hover:underline">View all</button>
+              <Link to="/transactions" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium hover:underline">View all</Link>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-neutral-800/50">
               {recentTransactions.map((tx) => (
@@ -184,20 +189,30 @@ export default function Dashboard() {
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-sm font-bold dark:text-white">Monthly Budget</h3>
               <Link to="/budget" className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                Set a Limit
+                Manage Limits
               </Link>
             </div>
             
-            <p className="text-xs text-slate-500 dark:text-neutral-400 mb-4 leading-relaxed">
-              You are <strong>{budgetPercentage}%</strong> close to spending a hypothetical ₦1,000,000. Set a custom spending limit to track your actual goals!
-            </p>
-            
-            <div className="w-full h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-1000 ${budgetPercentage > 90 ? 'bg-rose-500' : 'bg-emerald-500'}`} 
-                style={{ width: `${budgetPercentage}%` }}
-              ></div>
-            </div>
+            {!hasBudgetLimit ? (
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg p-4 mt-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-indigo-900 dark:text-indigo-300 leading-relaxed">
+                  You haven't set a budget yet. Set a spending limit to track your goals and receive alerts!
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 mb-4 leading-relaxed">
+                  You have spent <strong>₦{expenses.toLocaleString()}</strong> of your ₦{realBudgetLimit.toLocaleString()} limit.
+                </p>
+                <div className="w-full h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-1000 ${isOverBudget ? 'bg-rose-500' : budgetPercentage > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                    style={{ width: `${budgetPercentage}%` }}
+                  ></div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">

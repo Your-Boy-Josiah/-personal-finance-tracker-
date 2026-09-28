@@ -6,10 +6,13 @@
 
 const Transaction = require('../models/Transaction');
 const Category = require('../models/Category');
+const Budget = require('../models/Budget'); 
 
 const getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id;
+    // Extract timezone from client request, fallback to UTC
+    const userTz = req.query.timezone || 'UTC';
 
     // Get Totals (Income, Expenses, Balance)
     const totals = await Transaction.aggregate([
@@ -25,6 +28,12 @@ const getDashboardSummary = async (req, res) => {
     const totalIncome = totals[0]?.totalIncome || 0;
     const totalExpenses = totals[0]?.totalExpenses || 0;
     const currentBalance = totalIncome - totalExpenses;
+
+    // Fetch User's Total Budget Limit
+    const userBudgets = await Budget.find({ user: userId });
+
+    // Adjust 'amount' to match your actual Budget schema field if it uses 'limit' instead
+    const totalBudgetLimit = userBudgets.reduce((sum, budget) => sum + (budget.amount || budget.limit || 0), 0);
 
     // Get Recent Transactions (Limit 5)
     const recentTransactions = await Transaction.find({ user: userId })
@@ -46,11 +55,14 @@ const getDashboardSummary = async (req, res) => {
       color: cat._id?.color || '#94a3b8'
     }));
 
-    // Monthly Data (Group by month and year)
+    // Monthly Data (Using Client Timezone for precise grouping)
     const monthlyDataRaw = await Transaction.aggregate([
       { $match: { user: userId } },
       { $group: {
-          _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
+          _id: { 
+            month: { $month: { date: "$createdAt", timezone: userTz } }, 
+            year: { $year: { date: "$createdAt", timezone: userTz } } 
+          },
           income: { $sum: { $cond: [{ $eq: ["$type", "income"] }, "$amount", 0] } },
           expenses: { $sum: { $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0] } }
         }
@@ -65,13 +77,13 @@ const getDashboardSummary = async (req, res) => {
       expenses: data.expenses
     }));
 
-    // Send everything to the frontend
     res.status(200).json({
       success: true,
       data: {
         totalIncome,
         totalExpenses,
         totalBalance: currentBalance,
+        totalBudgetLimit, // Sent dynamically to the frontend
         recentTransactions,
         categorySpending,
         monthlyData
@@ -83,6 +95,6 @@ const getDashboardSummary = async (req, res) => {
   }
 };
 
-module.exports = {
-   getDashboardSummary 
-  };
+module.exports = { 
+  getDashboardSummary 
+};
