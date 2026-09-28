@@ -1,21 +1,29 @@
 // ===============================================================
 //  authRoutes.js
 //  Defines the API endpoints for user authentication, including
-//  the forgot/reset password flow.
+//  the forgot/reset password flow and profile management.
 // ===============================================================
 
 const express = require('express');
 const router = express.Router();
 
 // Import controller functions
-const { registerUser, loginUser, forgotPassword, resetPassword } = require('../controllers/authController');
+const { 
+  registerUser, 
+  loginUser, 
+  forgotPassword, 
+  resetPassword,
+  getMe,          // ADDED: Profile endpoints
+  updateProfile   // ADDED: Profile endpoints
+} = require('../controllers/authController');
 
-/// import validation middleware
+// Import authentication middleware
+const { protect } = require('../middleware/authMiddleware'); // ADDED: to protect profile routes
 
+// Import validation middleware
 const validate = require('../utils/validate');
 
 // Import Joi validation schemas for request body validation
-
 const {
   registerSchema,
   loginSchema,
@@ -40,12 +48,26 @@ router.post('/login', validate(loginSchema), loginUser);
 // @route   POST /api/auth/forgot-password
 // @desc    Generate a password reset token for the given email
 // @access  Public
-router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword); // UPDATED: new route for password reset flow
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword); 
 
 // @route   PUT /api/auth/reset-password/:token
 // @desc    Reset a user's password using a valid reset token
 // @access  Public
-router.put('/reset-password/:token', validate(resetPasswordSchema), resetPassword); // UPDATED: new route for password reset flow
+router.put('/reset-password/:token', validate(resetPasswordSchema), resetPassword); 
+
+// ==============================================================
+// PRIVATE ROUTES
+// ==============================================================
+
+// @route   GET /api/auth/me
+// @desc    Get current logged in user profile
+// @access  Private
+router.get('/me', protect, getMe);
+
+// @route   PUT /api/auth/profile
+// @desc    Update user profile details
+// @access  Private
+router.put('/profile', protect, updateProfile);
 
 // ============================================================
 // EXPORT ROUTER

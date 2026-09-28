@@ -5,29 +5,44 @@
 // ===============================================================
 
 const Transaction = require('../models/Transaction');
+const Category = require('../models/Category'); // ADDED: Needed for category validation
 const { syncAndPersistTransactions } = require('../services/transactionServices');
 
 // ==============================================================
 // CONTROLLER FUNCTIONS
 // ==============================================================
 
-// @desc    Get all transactions for the logged-in user (Paginated)
-// @route   GET /api/transactions?page=1&limit=10
+// @desc    Get all transactions for the logged-in user (Paginated & Filtered)
+// @route   GET /api/transactions
 // @access  Private
 const getTransactions = async (req, res) => {
   try {
     // Extract query parameters with safe fallbacks (default: page 1, 10 items)
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
+    const { type, category, startDate, endDate, search } = req.query;
     
     // Calculate how many documents to skip based on the current page
     const skip = (page - 1) * limit;
 
-    // Count total documents for the frontend pagination UI
-    const totalRecords = await Transaction.countDocuments({ user: req.user._id });
+    // FIXED: Build dynamic query object for filtering
+    const query = { user: req.user._id };
+    
+    if (type) query.type = type;
+    if (category) query.category = category;
+    if (startDate && endDate) {
+      query.transactionDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+    if (search) {
+      query.description = { $regex: search, $options: 'i' };
+    }
 
-    // Fetch only the requested chunk of data
-    const transactions = await Transaction.find({ user: req.user._id })
+    // Count total documents matching the filters for the frontend pagination UI
+    const totalRecords = await Transaction.countDocuments(query);
+
+    // Fetch only the requested chunk of filtered data
+    const transactions = await Transaction.find(query)
+      .populate('category', 'name color') // Added populate so frontend gets category names
       .sort({ transactionDate: -1 })
       .skip(skip)
       .limit(limit);
@@ -64,6 +79,16 @@ const addTransaction = async (req, res) => {
       return res.status(400).json({ message: 'Type, amount, and category are required fields' });
     }
 
+    // FIXED: Crucial Security Check - Ensure category belongs to user or is global
+    const categoryExists = await Category.findOne({ 
+      _id: category, 
+      $or: [{ user: req.user._id }, { user: null }] 
+    });
+
+    if (!categoryExists) {
+      return res.status(403).json({ message: 'Invalid or unauthorized category selection' });
+    }
+
     // 2. Create the transaction linked securely to the logged-in user
     const transaction = await Transaction.create({
       user: req.user._id,
@@ -97,9 +122,18 @@ const updateTransaction = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized to update this transaction' });
     }
 
+    // FIXED: Security Check - If they are changing the category, verify they own the new one
+    if (req.body.category) {
+      const categoryExists = await Category.findOne({ 
+        _id: req.body.category, 
+        $or: [{ user: req.user._id }, { user: null }] 
+      });
+      if (!categoryExists) {
+        return res.status(403).json({ message: 'Invalid or unauthorized category selection' });
+      }
+    }
+
     // 3. Update the document in MongoDB
-    // { new: true } returns the updated document rather than the old one
-    // { runValidators: true } ensures they can't change the amount to a negative number, etc.
     const updatedTransaction = await Transaction.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -151,8 +185,6 @@ const syncTransactions = async (req, res) => {
       ...result, // { matched, upserted, modified }
     });
   } catch (error) {
-    // "User has not connected a bank account" / "User not found" are
-    // client-side problems (400), not server errors (500).
     const isClientError = /not connected|user not found/i.test(error.message);
 
     res.status(isClientError ? 400 : 500).json({
