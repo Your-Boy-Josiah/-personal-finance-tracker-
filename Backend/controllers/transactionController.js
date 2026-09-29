@@ -42,7 +42,7 @@ const getTransactions = async (req, res) => {
 
     // Fetch only the requested chunk of filtered data
     const transactions = await Transaction.find(query)
-      .populate('category', 'name color') // Added populate so frontend gets category names
+      .populate('category', 'name color type') // Added populate so frontend gets category names
       .sort({ transactionDate: -1 })
       .skip(skip)
       .limit(limit);
