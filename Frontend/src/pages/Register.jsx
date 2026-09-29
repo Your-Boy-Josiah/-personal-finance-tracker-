@@ -30,21 +30,22 @@ export default function Register() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError("");
 
-    if (formData.password.length < 6) {
-      return setLocalError("Password must be at least 6 characters long.");
+    // FIXED: Match Backend Joi schema exactly
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      return setLocalError("Password must be at least 8 characters and include uppercase, lowercase, numbers, and special characters.");
     }
 
-    // Adjust these parameters based on your AuthContext's exact register function signature
     const result = await register(formData);
     if (result?.success) {
       navigate("/");
     }
   };
-
+  
   const displayError = localError || error;
 
   return (

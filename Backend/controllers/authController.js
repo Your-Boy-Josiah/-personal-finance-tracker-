@@ -2,7 +2,7 @@
 //  authController.js
 //  Handles authentication business logic including user
 //  registration, login, password hashing, JWT generation,
-//  and the forgot/reset password flow.
+//  profile management, and the forgot/reset password flow.
 // ===============================================================
 
 const crypto = require('crypto');
@@ -184,6 +184,43 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// @desc    Get current logged in user
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = async (req, res) => {
+  try {
+    // req.user is set by authMiddleware
+    res.status(200).json({ success: true, data: req.user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// @desc    Update user profile details
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, email } = req.body;
+    
+    // Check if email is being taken by someone else
+    if (email && email !== req.user.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) return res.status(400).json({ success: false, message: 'Email already in use' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { firstName, lastName, email },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.status(200).json({ success: true, data: updatedUser });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating profile', error: error.message });
+  }
+};
+
 // ============================================================
 // EXPORT CONTROLLERS
 // ============================================================
@@ -193,4 +230,6 @@ module.exports = {
   loginUser,
   forgotPassword,
   resetPassword,
+  getMe,           
+  updateProfile
 };

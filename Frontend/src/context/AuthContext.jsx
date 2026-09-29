@@ -1,86 +1,89 @@
-import { createContext, useContext, useState } from "react";
+// ===============================================================
+//  AuthContext.jsx
+//  Manages global authentication state, token persistence, and
+//  enhanced error surfacing from the backend.
+// ===============================================================
+
+import { createContext, useContext, useState, useEffect } from "react";
 import api from "../services/api";
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  // Safely initialize state and prevent JSON parsing crashes
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem("user");
-      return saved && saved !== "undefined" ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [loading, setLoading] = useState(false);
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  function saveSession(token, userData) {
-    if (!token) return;
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
-  }
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const res = await api.get("/auth/me");
+          // /me endpoint wraps response in { success: true, data: {...} }
+          setUser(res.data.data);
+        } catch (err) {
+          localStorage.removeItem("token");
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+    checkLoggedIn();
+  }, []);
 
-  async function login(email, password) {
+  // Helper to extract nested backend errors
+  const extractErrors = (err) => {
+    if (err.response?.data?.errors) {
+      return err.response.data.errors.join(" | ");
+    }
+    return err.response?.data?.message || "An unexpected error occurred.";
+  };
+
+  const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
       const res = await api.post("/auth/login", { email, password });
-      
-      // Smart extraction: handles both standard { token, user } and nested { data: { token, user } }
-      const payload = res.data.data || res.data;
-      const token = payload.token || payload.accessToken;
-      const userData = payload.user || payload;
-      
-      saveSession(token, userData);
+      localStorage.setItem("token", res.data.token);
+      // BUG FIX: login endpoint returns data directly, not inside a 'data' object
+      setUser(res.data); 
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.message || "Invalid email or password";
-      setError(message);
-      return { success: false, message };
+      setError(extractErrors(err));
+      return { success: false };
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function register(formData) {
+  const register = async (userData) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post("/auth/register", formData);
-      
-      const payload = res.data.data || res.data;
-      const token = payload.token || payload.accessToken;
-      const userData = payload.user || payload;
-      
-      saveSession(token, userData);
+      const res = await api.post("/auth/register", userData);
+      localStorage.setItem("token", res.data.token);
+      // BUG FIX: register endpoint returns data directly
+      setUser(res.data); 
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.message || "Unable to create account";
-      setError(message);
-      return { success: false, message };
+      setError(extractErrors(err));
+      return { success: false };
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  function logout() {
+  const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
     setUser(null);
-  }
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside an AuthProvider");
-  return context;
-}
+};
