@@ -32,8 +32,24 @@ const getDashboardSummary = async (req, res) => {
     // Fetch User's Total Budget Limit
     const userBudgets = await Budget.find({ user: userId });
 
-    // Adjust 'amount' to match your actual Budget schema field if it uses 'limit' instead
-    const totalBudgetLimit = userBudgets.reduce((sum, budget) => sum + (budget.amount || budget.limit || 0), 0);
+    // Budget limits may be stored directly or as category spending caps.
+    // Use nullish checks so a valid zero is preserved and missing nested
+    // properties do not cause the dashboard request to fail.
+    const totalBudgetLimit = userBudgets.reduce((sum, budget) => {
+      if (budget.amount != null || budget.limit != null) {
+        return sum + Number(budget.amount ?? budget.limit ?? 0);
+      }
+
+      const categoryLimits = budget.categoryLimits;
+      const categoryTotal = Array.isArray(categoryLimits)
+        ? categoryLimits.reduce(
+            (categorySum, category) => categorySum + Number(category.spendingCap ?? category.limit ?? category.amount ?? 0),
+            0
+          )
+        : Number(categoryLimits?.spendingCap ?? categoryLimits?.limit ?? categoryLimits?.amount ?? 0);
+
+      return sum + categoryTotal;
+    }, 0);
 
     // Get Recent Transactions (Limit 5)
     const recentTransactions = await Transaction.find({ user: userId })
