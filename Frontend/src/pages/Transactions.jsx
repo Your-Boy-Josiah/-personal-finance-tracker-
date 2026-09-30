@@ -26,7 +26,6 @@ const getToday = () => {
   return today.toISOString().slice(0, 10);
 };
 
-// NEW: Added subCategory to empty form
 const emptyForm = () => ({
   type: "expense",
   amount: "",
@@ -36,7 +35,6 @@ const emptyForm = () => ({
   transactionDate: getToday(),
 });
 
-// NEW: Added subCategory to the mapper
 const transactionToForm = (transaction) => ({
   type: transaction.type || "expense",
   amount: String(transaction.amount ?? ""),
@@ -209,6 +207,7 @@ const Transactions = () => {
       await api.post("/transactions", {
         ...form,
         amount: Number(form.amount),
+        subCategory: form.subCategory?.trim() || null, // DB Sanitization
       });
       closeTransactionDialog();
       setPage(1);
@@ -232,6 +231,7 @@ const Transactions = () => {
       await api.put(`/transactions/${selectedTransaction._id}`, {
         ...form,
         amount: Number(form.amount),
+        subCategory: form.subCategory?.trim() || null, // DB Sanitization
       });
       closeTransactionDialog();
       setRefreshKey((key) => key + 1);
@@ -266,8 +266,9 @@ const Transactions = () => {
     }
   };
 
-  // NEW: Find the currently selected category to see if it has subcategories
-  const activeCategoryObj = categories.find(c => c._id === form.category);
+  // Dynamic filter to ensure Income transactions only show Income categories, etc.
+  const filteredCategories = categories.filter(c => c.type === form.type);
+  const activeCategoryObj = filteredCategories.find(c => c._id === form.category);
   const hasSubCategories = activeCategoryObj && activeCategoryObj.subCategories && activeCategoryObj.subCategories.length > 0;
 
   // ==============================================================
@@ -295,7 +296,7 @@ const Transactions = () => {
           <button
             type="button"
             onClick={() => openTransactionDialog(null, "create")}
-            className="inline-flex shrink-0 items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+            className="inline-flex shrink-0 items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-50"
           >
             <Plus size={16} />
             Add transaction
@@ -361,7 +362,6 @@ const Transactions = () => {
                     </dd>
                   </div>
                   
-                  {/* NEW: Show Sub-Category in View Dialog if it exists */}
                   {selectedTransaction.subCategory && (
                     <div>
                       <dt className="text-xs font-medium uppercase text-slate-500 dark:text-neutral-400">Sub-Category</dt>
@@ -412,7 +412,8 @@ const Transactions = () => {
                   <select
                     id="transaction-type"
                     value={form.type}
-                    onChange={(event) => setForm({ ...form, type: event.target.value })}
+                    // Reset category and subCategory state when switching types
+                    onChange={(event) => setForm({ ...form, type: event.target.value, category: "", subCategory: "" })}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
                   >
                     <option value="expense">Expense</option>
@@ -439,20 +440,19 @@ const Transactions = () => {
                     id="transaction-category"
                     required
                     value={form.category}
-                    // NEW: When the category changes, clear out the old subCategory so it doesn't get saved by mistake
+                    // Clear subCategory if the main category is changed
                     onChange={(event) => setForm({ ...form, category: event.target.value, subCategory: "" })}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
                   >
                     <option value="" disabled>
-                      {categoriesError ? "Categories unavailable" : categories.length ? "Select a category" : "No categories available"}
+                      {categoriesError ? "Categories unavailable" : filteredCategories.length ? "Select a category" : `No ${form.type} categories available`}
                     </option>
-                    {categories.map((category) => (
+                    {filteredCategories.map((category) => (
                       <option key={category._id} value={category._id}>{category.name}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* NEW: Sub-category dropdown (only shows if the selected category has tags) */}
                 {hasSubCategories && (
                   <div>
                     <label htmlFor="transaction-subcategory" className="mb-1.5 block text-sm font-medium">Sub-category</label>
@@ -500,7 +500,7 @@ const Transactions = () => {
                   <button type="button" onClick={closeTransactionDialog} className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-neutral-700 hover:bg-slate-50 dark:hover:bg-neutral-900">Cancel</button>
                   <button
                     type="submit"
-                    disabled={isSaving || categories.length === 0}
+                    disabled={isSaving || filteredCategories.length === 0}
                     className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                   >
                     {isSaving ? "Saving..." : (dialogMode === "create" ? "Save transaction" : "Save changes")}
@@ -588,7 +588,6 @@ const Transactions = () => {
                         </td>
                         <td className="px-5 py-4 text-slate-500 dark:text-neutral-400">
                           {category}
-                          {/* NEW: Displays the sub-category as a sleek pill right next to the category name */}
                           {transaction.subCategory && (
                             <span className="ml-2 inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[10px] uppercase text-slate-600 dark:bg-neutral-800 dark:text-neutral-400">
                               {transaction.subCategory}

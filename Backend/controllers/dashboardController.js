@@ -1,7 +1,7 @@
 // ===============================================================
 //  dashboardController.js
 //  Handles business logic for the financial dashboard, using
-//  MongoDB aggregation to calculate totals and balances efficiently.
+//  MongoDB aggregation to calculate totals, balances, and trends.
 // ===============================================================
 
 const Transaction = require('../models/Transaction');
@@ -11,7 +11,6 @@ const Budget = require('../models/Budget');
 const getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id;
-    // Extract timezone from client request, fallback to UTC
     const userTz = req.query.timezone || 'UTC';
 
     // Get Totals (Income, Expenses, Balance)
@@ -19,8 +18,8 @@ const getDashboardSummary = async (req, res) => {
       { $match: { user: userId } },
       { $group: {
           _id: null,
-          totalIncome: { $sum: { $cond: [{ $eq: ["$type", "income"] }, "$amount", 0] } },
-          totalExpenses: { $sum: { $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0] } }
+          totalIncome: { $sum: { $cond: [{$eq: ["$type", "income"] }, "$amount", 0] } },
+          totalExpenses: { $sum: { $cond: [{$eq: ["$type", "expense"] }, "$amount", 0] } }
         }
       }
     ]);
@@ -31,15 +30,10 @@ const getDashboardSummary = async (req, res) => {
 
     // Fetch User's Total Budget Limit
     const userBudgets = await Budget.find({ user: userId });
-
-    // Budget limits may be stored directly or as category spending caps.
-    // Use nullish checks so a valid zero is preserved and missing nested
-    // properties do not cause the dashboard request to fail.
     const totalBudgetLimit = userBudgets.reduce((sum, budget) => {
       if (budget.amount != null || budget.limit != null) {
         return sum + Number(budget.amount ?? budget.limit ?? 0);
       }
-
       const categoryLimits = budget.categoryLimits;
       const categoryTotal = Array.isArray(categoryLimits)
         ? categoryLimits.reduce(
@@ -53,34 +47,53 @@ const getDashboardSummary = async (req, res) => {
 
     // Get Recent Transactions (Limit 5)
     const recentTransactions = await Transaction.find({ user: userId })
-      .sort({ createdAt: -1 })
+      .sort({ transactionDate: -1, createdAt: -1 })
       .limit(5)
       .populate('category', 'name color');
 
-    // Category Spending (Group by category, sum expenses)
+    // Category Spending (Drill-Down Setup: Group by category AND subCategory)
     const categorySpendingRaw = await Transaction.aggregate([
       { $match: { user: userId, type: 'expense' } },
-      { $group: { _id: "$category", value: { $sum: "$amount" } } },
-      { $sort: { value: -1 } }
+      // First, group by both category and subCategory
+      { $group: { 
+          _id: { category: "$category", subCategory: "$subCategory" }, 
+          value: { $sum: "$amount" } 
+        } 
+      },
+      // Second, group by just the category to nest the subCategories
+      { $group: {
+          _id: "$_id.category",
+          totalValue: { $sum: "$value" },
+          subCategories: { 
+            $push: { 
+              name: { $ifNull: ["$_id.subCategory", "General"] }, // Fallback for transactions without a subCategory
+              value: "$value" 
+            } 
+          }
+        }
+      },
+      { $sort: { totalValue: -1 } }
     ]);
 
     const populatedCategories = await Category.populate(categorySpendingRaw, { path: '_id', select: 'name color' });
     const categorySpending = populatedCategories.map(cat => ({
+      id: cat._id?._id,
       name: cat._id?.name || 'Uncategorized',
-      value: cat.value,
-      color: cat._id?.color || '#94a3b8'
+      value: cat.totalValue,
+      color: cat._id?.color || '#94a3b8',
+      subCategories: cat.subCategories
     }));
 
-    // Monthly Data (Using Client Timezone for precise grouping)
+    // Monthly Data 
     const monthlyDataRaw = await Transaction.aggregate([
       { $match: { user: userId } },
       { $group: {
           _id: { 
-            month: { $month: { date: "$createdAt", timezone: userTz } }, 
-            year: { $year: { date: "$createdAt", timezone: userTz } } 
+            month: { $month: { date: "$transactionDate", timezone: userTz } }, 
+            year: { $year: { date: "$transactionDate", timezone: userTz } } 
           },
-          income: { $sum: { $cond: [{ $eq: ["$type", "income"] }, "$amount", 0] } },
-          expenses: { $sum: { $cond: [{ $eq: ["$type", "expense"] }, "$amount", 0] } }
+          income: { $sum: { $cond: [{$eq: ["$type", "income"] }, "$amount", 0] } },
+          expenses: { $sum: { $cond: [{$eq: ["$type", "expense"] }, "$amount", 0] } }
         }
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } }
@@ -93,16 +106,48 @@ const getDashboardSummary = async (req, res) => {
       expenses: data.expenses
     }));
 
+    // Daily Trend Data (Last 30 Days) for Pop-Up Modals
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const dailyDataRaw = await Transaction.aggregate([
+      { $match: { 
+          user: userId,
+          transactionDate: { $gte: thirtyDaysAgo } 
+        } 
+      },
+      { $group: {
+          _id: { 
+            day: { $dayOfMonth: { date: "$transactionDate", timezone: userTz } },
+            month: { $month: { date: "$transactionDate", timezone: userTz } }, 
+            year: { $year: { date: "$transactionDate", timezone: userTz } } 
+          },
+          income: { $sum: { $cond: [{$eq: ["$type", "income"] }, "$amount", 0] } },
+          expenses: { $sum: { $cond: [{$eq: ["$type", "expense"] }, "$amount", 0] } }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
+    ]);
+
+    const dailyData = dailyDataRaw.map(data => ({
+      date: `${monthNames[data._id.month - 1]} ${data._id.day}`,
+      income: data.income,
+      expenses: data.expenses,
+      profit: data.income - data.expenses
+    }));
+
+    // Send Response
     res.status(200).json({
       success: true,
       data: {
         totalIncome,
         totalExpenses,
-        totalBalance: currentBalance,
-        totalBudgetLimit, // Sent dynamically to the frontend
+        totalBalance: currentBalance, // Actual Net Profit
+        totalBudgetLimit, 
         recentTransactions,
         categorySpending,
-        monthlyData
+        monthlyData,
+        dailyData // Sent to frontend for Trend Modals
       }
     });
 
