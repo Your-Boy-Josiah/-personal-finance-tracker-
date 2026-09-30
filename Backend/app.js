@@ -94,3 +94,4 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Export the app for Supertest to use in audit.test.js
 module.exports = app;
+

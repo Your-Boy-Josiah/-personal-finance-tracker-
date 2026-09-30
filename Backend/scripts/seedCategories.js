@@ -23,7 +23,9 @@ const seedDB = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB Connected...');
     
-    // Optional: await Category.deleteMany({ user: null }); // Clear old defaults
+    // FIXED: Clears old defaults before inserting to prevent duplicates
+    await Category.deleteMany({ user: null }); 
+    
     await Category.insertMany(defaultCategories);
     
     console.log('Global Default Categories Seeded Successfully!');

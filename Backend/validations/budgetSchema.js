@@ -9,6 +9,8 @@ const categoryLimitSchema = Joi.object({
   category: Joi.string().hex().length(24).required().messages({
     'string.length': 'Invalid category ID format'
   }),
+  // NEW: Allow the subCategory string through the validation gate
+  subCategory: Joi.string().allow(null, '').optional(),
   spendingCap: Joi.number().min(0).required()
 });
 

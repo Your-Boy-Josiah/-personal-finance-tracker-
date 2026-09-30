@@ -1,7 +1,7 @@
 // ===============================================================
 //  categoryController.js
-//  Handles business logic for retrieving, creating, and deleting
-//  transaction categories. Ensures users only access their own categories.
+//  Handles business logic for retrieving, creating, updating, and deleting
+//  transaction categories. Unrestricted control for users.
 // ===============================================================
 
 const mongoose = require('mongoose');
@@ -17,12 +17,10 @@ const Transaction = require('../models/Transaction');
 // @access  Private
 const getCategories = async (req, res) => {
   try {
-    // Fetch custom categories created by this user OR default global categories (where user is null)
     const categories = await Category.find({
       $or: [{ user: req.user._id }, { user: null }]
     });
     
-    // Standardized response shape
     res.status(200).json({ success: true, data: categories });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error fetching categories', error: error.message });
@@ -34,7 +32,7 @@ const getCategories = async (req, res) => {
 // @access  Private
 const createCategory = async (req, res) => {
   try {
-    const { name, type, color } = req.body;
+    const { name, type, color, subCategories } = req.body;
 
     if (!name || !type) {
       return res.status(400).json({ success: false, message: 'Category name and type are required' });
@@ -44,17 +42,56 @@ const createCategory = async (req, res) => {
       name,
       type,
       color: color || '#000000',
+      subCategories: Array.isArray(subCategories) ? subCategories : [],
       user: req.user._id, 
     });
 
-    // Standardized response shape
     res.status(201).json({ success: true, data: category });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error creating category', error: error.message });
   }
 };
 
-// @desc    Delete category and reassign transactions (ACID Cascade)
+// @desc    Update a category (name, color, type, subCategories)
+// @route   PUT /api/categories/:id
+// @access  Private
+const updateCategory = async (req, res) => {
+  try {
+    const categoryId = req.params.id;
+    const userId = req.user._id;
+
+    let category = await Category.findById(categoryId);
+
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
+    // 7-POINT PLAN FIX: Removed the lock on system categories.
+    // Now only blocks access if the category belongs to a DIFFERENT specific user.
+    if (category.user !== null && category.user.toString() !== userId.toString()) {
+      return res.status(401).json({ success: false, message: 'Not authorized to edit this category' });
+    }
+
+    const { name, type, color, subCategories } = req.body;
+    
+    if (name) category.name = name;
+    if (type) category.type = type;
+    if (color) category.color = color;
+    
+    // Explicitly update subCategories if an array is passed (even an empty one)
+    if (Array.isArray(subCategories)) {
+      category.subCategories = subCategories;
+    }
+
+    await category.save();
+
+    res.status(200).json({ success: true, data: category });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error updating category', error: error.message });
+  }
+};
+
+// @desc    Delete category and reassign transactions
 // @route   DELETE /api/categories/:id
 // @access  Private
 const deleteCategory = async (req, res, next) => {
@@ -65,33 +102,25 @@ const deleteCategory = async (req, res, next) => {
     const categoryId = req.params.id;
     const userId = req.user._id;
 
-    // 1. Find the category and bind it to the session
     const category = await Category.findById(categoryId).session(session);
     
-    // 2. Strict Validation Checks
     if (!category) {
       await session.abortTransaction();
       session.endSession();
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
-    if (category.user === null) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(403).json({ success: false, message: 'Cannot delete global system categories' });
-    }
-
-    if (category.user.toString() !== userId.toString()) {
+    // 7-POINT PLAN FIX: Removed the lock on system categories.
+    if (category.user !== null && category.user.toString() !== userId.toString()) {
       await session.abortTransaction();
       session.endSession();
       return res.status(401).json({ success: false, message: 'Not authorized to delete this category' });
     }
 
-    // 3. FIXED: Find or create an "Uncategorized" bucket matching the TYPE of the deleted category
     let uncategorized = await Category.findOne({ 
       user: userId, 
       name: 'Uncategorized',
-      type: category.type // Security fix: don't mix income and expenses
+      type: category.type 
     }).session(session);
 
     if (!uncategorized) {
@@ -102,43 +131,33 @@ const deleteCategory = async (req, res, next) => {
       uncategorized = uncats[0];
     }
 
-    // 4. Safely reassign orphaned transactions to the matching Uncategorized bucket
     await Transaction.updateMany(
       { category: categoryId, user: userId },
       { $set: { category: uncategorized._id } },
       { session }
     );
 
-    // 5. Delete the original category
     await Category.deleteOne({ _id: categoryId }).session(session);
 
-    // 6. Commit the ACID transaction
     await session.commitTransaction();
     session.endSession();
 
     res.status(200).json({ 
       success: true, 
-      message: 'Category deleted and transactions successfully reassigned to Uncategorized' 
+      message: 'Category deleted and transactions reassigned' 
     });
 
   } catch (error) {
-    // If anything fails, rollback all database changes
     await session.abortTransaction();
     session.endSession();
-    
-    if (next) {
-      next(error);
-    } else {
-      res.status(500).json({ success: false, message: 'Server error during deletion cascade', error: error.message });
-    }
+    if (next) next(error);
+    else res.status(500).json({ success: false, message: 'Server error during deletion cascade', error: error.message });
   }
 };
 
-// ============================================================
-// EXPORT CONTROLLERS
-// ============================================================
 module.exports = {
   getCategories,
   createCategory,
+  updateCategory,
   deleteCategory
 };

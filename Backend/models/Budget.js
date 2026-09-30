@@ -17,6 +17,7 @@ const mongoose = require('mongoose');
 // exceed the cap; the cap is a comparison target used by the advisory
 // service to calculate overspending and recommend cut-backs.
 // ==============================================================
+
 const categoryLimitSchema = new mongoose.Schema(
   {
     category: {
@@ -24,13 +25,20 @@ const categoryLimitSchema = new mongoose.Schema(
       ref: 'Category',
       required: [true, 'Budget category is required'],
     },
+    // NEW: Allows setting a budget specifically for a sub-category (e.g. "Snacks")
+    // If left null, the spending cap applies to the entire main category.
+    subCategory: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     spendingCap: {
       type: Number,
       required: [true, 'Spending cap is required'],
       min: [0, 'Spending cap cannot be negative'],
     },
   },
-  { _id: false }
+  { _id: false } // Prevents Mongoose from generating a separate ID for each sub-document
 );
 
 // ==============================================================
@@ -39,6 +47,7 @@ const categoryLimitSchema = new mongoose.Schema(
 // categoryLimits array keeps income settings and category targets
 // together so the advisory service can read one planning record.
 // ==============================================================
+
 const budgetSchema = new mongoose.Schema(
   {
     user: {

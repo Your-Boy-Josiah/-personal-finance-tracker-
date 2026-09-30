@@ -32,6 +32,11 @@ const categorySchema = new PM.Schema(
       type: String,
       trim: true,
       default: '#000000', // Hex code for frontend UI rendering
+    },
+    // NEW: Array of predefined sub-categories linked to this main category.
+   subCategories: {
+      type: [String],
+      default: []
     }
   },
   // ============================================================

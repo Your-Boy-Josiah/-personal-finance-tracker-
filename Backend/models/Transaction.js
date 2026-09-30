@@ -40,6 +40,13 @@ const transactionSchema = new PM.Schema(
       ],
       index: true, // Indexed for fast filtering by category in the frontend
     },
+    // NEW: Added to support interactive dashboard drill-downs (e.g., Food -> Groceries)
+    subCategory: {
+      type: String,
+      trim: true,
+      default: null, // Left null if the user doesn't want to get this specific
+      index: true,
+    },
     description: {
       type: String,
       trim: true,
@@ -89,8 +96,7 @@ const transactionSchema = new PM.Schema(
 // ============================================================
 
 // Prevents duplicate bank-synced transactions per user. Only enforced on documents that actually have a bankTransactionId, so manually entered transactions are unaffected. 
-// This is what B-3's bulkWrite
-// upsert logic relies on for idempotency.
+// This is what B-3's bulkWrite upsert logic relies on for idempotency.
 transactionSchema.index(
   { user: 1, bankTransactionId: 1 },
   { unique: true, partialFilterExpression: { bankTransactionId: { $exists: true } } }
