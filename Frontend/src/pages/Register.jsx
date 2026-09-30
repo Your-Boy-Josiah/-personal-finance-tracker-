@@ -42,7 +42,7 @@ const handleSubmit = async (e) => {
 
     const result = await register(formData);
     if (result?.success) {
-      navigate("/");
+      navigate("/app", { replace: true });
     }
   };
   

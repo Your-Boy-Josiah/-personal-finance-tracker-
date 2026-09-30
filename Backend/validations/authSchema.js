@@ -50,7 +50,30 @@ const resetPasswordSchema = Joi.object({
   // NOTE: the reset token itself travels as a route param, not in the body.
 });
 
+const updateProfileSchema = Joi.object({
+  firstName: Joi.string().trim().min(2).max(50),
+  lastName: Joi.string().trim().min(2).max(50),
+  email: Joi.string().email().trim().lowercase().min(6).max(60),
+  baseCurrency: Joi.string().valid('NGN', 'USD', 'EUR', 'GBP'),
+  monthlyIncome: Joi.number().min(0),
+}).min(1);
+
+const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().required(),
+  newPassword: Joi.string().min(8).required().pattern(passwordRegex).invalid(Joi.ref('currentPassword')).messages({
+    'string.pattern.base': 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&)',
+    'any.invalid': 'New password must be different from the current password',
+  }),
+});
+
 // ============================================================
 // EXPORT SCHEMAS
 // ============================================================
-module.exports = { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema };
+module.exports = {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  updateProfileSchema,
+  changePasswordSchema,
+};

@@ -7,12 +7,14 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, AlertCircle, CheckCircle2 } from "lucide-react";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 // ==============================================================
 // MAIN COMPONENT
 // ==============================================================
 
 const Budget = () => {
+  const { user } = useAuth();
   // --- State Management ---
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,9 +23,9 @@ const Budget = () => {
 
   // Budget Form State
   const [budgetForm, setBudgetForm] = useState({
-    monthlyIncome: "",
+    monthlyIncome: user?.monthlyIncome ? String(user.monthlyIncome) : "",
     incomeFrequency: "monthly",
-    currency: "NGN",
+    currency: user?.baseCurrency || "NGN",
     categoryLimits: [],
   });
 

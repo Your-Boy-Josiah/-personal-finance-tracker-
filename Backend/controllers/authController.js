@@ -65,10 +65,13 @@ const registerUser = async (req, res) => {
     if (user) {
       res.status(201).json({
         _id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
         fullName: user.fullName, // Accessing the virtual property
         email: user.email,
         role: user.role,                 // UPDATED: Include role
         baseCurrency: user.baseCurrency, // UPDATED: Include currency
+        monthlyIncome: user.monthlyIncome,
         token: generateToken(user._id),
       });
     } else {
@@ -98,10 +101,13 @@ const loginUser = async (req, res) => {
     if (user && (await bcrypt.compare(password, user.password))) {
       res.status(200).json({
         _id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
         fullName: user.fullName,
         email: user.email,
         role: user.role,                 // UPDATED: Include role
         baseCurrency: user.baseCurrency, // UPDATED: Include currency
+        monthlyIncome: user.monthlyIncome,
         token: generateToken(user._id),
       });
     } else {
@@ -201,23 +207,47 @@ const getMe = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email } = req.body;
-    
+    const allowedFields = ['firstName', 'lastName', 'email', 'baseCurrency', 'monthlyIncome'];
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([field]) => allowedFields.includes(field))
+    );
+
     // Check if email is being taken by someone else
-    if (email && email !== req.user.email) {
-      const emailExists = await User.findOne({ email });
+    if (updates.email && updates.email !== req.user.email) {
+      const emailExists = await User.findOne({ email: updates.email });
       if (emailExists) return res.status(400).json({ success: false, message: 'Email already in use' });
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { firstName, lastName, email },
+      updates,
       { new: true, runValidators: true }
     ).select('-password');
 
     res.status(200).json({ success: true, data: updatedUser });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error updating profile', error: error.message });
+  }
+};
+
+// @desc    Change the current user's password
+// @route   PUT /api/auth/password
+// @access  Private
+const changePassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+password');
+    const { currentPassword, newPassword } = req.body;
+
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error changing password', error: error.message });
   }
 };
 
@@ -231,5 +261,6 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getMe,           
-  updateProfile
+  updateProfile,
+  changePassword
 };

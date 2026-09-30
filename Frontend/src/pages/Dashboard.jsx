@@ -142,7 +142,7 @@ export default function Dashboard() {
           <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
             <div className="p-4 border-b border-slate-100 dark:border-neutral-800 flex justify-between items-center">
               <h3 className="text-sm font-bold dark:text-white">Recent transactions</h3>
-              <Link to="/transactions" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium hover:underline">View all</Link>
+              <Link to="/app/transactions" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium hover:underline">View all</Link>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-neutral-800/50">
               {recentTransactions.map((tx) => (
@@ -188,7 +188,7 @@ export default function Dashboard() {
           <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-sm font-bold dark:text-white">Monthly Budget</h3>
-              <Link to="/budget" className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link to="/app/budget" className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
                 Manage Limits
               </Link>
             </div>
