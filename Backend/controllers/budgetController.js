@@ -49,9 +49,16 @@ const updateBudget = async (req, res) => {
         return res.status(400).json({ message: 'Category limits must be an array' });
       }
 
-      const categoryIds = categoryLimits.map((limit) => String(limit.category));
-      if (new Set(categoryIds).size !== categoryIds.length) {
-        return res.status(400).json({ message: 'Each category may only have one spending cap' });
+      // FIX: Validate uniqueness based on the combination of category AND subCategory.
+      // This allows you to have separate budgets for "Food -> Groceries" and "Food -> Snacks".
+      const limitKeys = categoryLimits.map((limit) => {
+        const catId = String(limit.category);
+        const sub = limit.subCategory ? limit.subCategory.trim().toLowerCase() : 'MAIN';
+        return `${catId}_${sub}`;
+      });
+
+      if (new Set(limitKeys).size !== limitKeys.length) {
+        return res.status(400).json({ message: 'Each category/sub-category combination may only have one spending cap' });
       }
     }
 
@@ -71,4 +78,7 @@ const updateBudget = async (req, res) => {
 // EXPORT CONTROLLERS
 // ============================================================
 
-module.exports = { getBudget, updateBudget };
+module.exports = { 
+  getBudget, 
+  updateBudget 
+};
