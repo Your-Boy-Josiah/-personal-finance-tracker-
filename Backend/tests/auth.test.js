@@ -58,7 +58,31 @@ describe('End-to-End Security & Cascade Audit', () => {
 
     expect(res.statusCode).toBe(201);
     expect(res.body.token).toBeDefined();
+    expect(res.body.firstName).toBe('Audit');
     userToken = res.body.token; // Save token for protected routes
+
+    const profileRes = await request(app)
+      .put('/api/auth/profile')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ baseCurrency: 'USD', monthlyIncome: 6500 });
+
+    expect(profileRes.statusCode).toBe(200);
+    expect(profileRes.body.data.baseCurrency).toBe('USD');
+    expect(profileRes.body.data.monthlyIncome).toBe(6500);
+
+    const passwordRes = await request(app)
+      .put('/api/auth/password')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ currentPassword: 'Password123!', newPassword: 'NewPassword456!' });
+
+    expect(passwordRes.statusCode).toBe(200);
+
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'audit@example.com', password: 'NewPassword456!' });
+
+    expect(loginRes.statusCode).toBe(200);
+    expect(loginRes.body.monthlyIncome).toBe(6500);
   });
 
   it('should create a custom category', async () => {

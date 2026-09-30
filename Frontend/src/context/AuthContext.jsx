@@ -9,6 +9,7 @@ import api from "../services/api";
 
 const AuthContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -24,7 +25,7 @@ export const AuthProvider = ({ children }) => {
           const res = await api.get("/auth/me");
           // /me endpoint wraps response in { success: true, data: {...} }
           setUser(res.data.data);
-        } catch (err) {
+        } catch {
           localStorage.removeItem("token");
           setUser(null);
         }
@@ -76,13 +77,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (profileData) => {
+    setError(null);
+    try {
+      const res = await api.put("/auth/profile", profileData);
+      setUser(res.data.data);
+      return { success: true, data: res.data.data };
+    } catch (err) {
+      const message = extractErrors(err);
+      setError(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const changePassword = async (passwordData) => {
+    setError(null);
+    try {
+      const res = await api.put("/auth/password", passwordData);
+      return { success: true, message: res.data.message };
+    } catch (err) {
+      const message = extractErrors(err);
+      setError(message);
+      return { success: false, error: message };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, updateProfile, changePassword, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -9,7 +9,7 @@
 // ==============================================================
 
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Wallet, Eye, EyeOff } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
@@ -34,6 +34,7 @@ export default function Login() {
   
   const { login, error, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Cycles through the currencies every 3.5 seconds
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function Login() {
     e.preventDefault();
     const result = await login(email, password);
     if (result.success) {
-      navigate("/");
+      navigate(location.state?.from?.pathname || "/app", { replace: true });
     }
   };
 

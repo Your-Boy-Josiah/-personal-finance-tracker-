@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { 
   LayoutDashboard, Target, FolderPlus, ArrowRightLeft, 
   TrendingUp, Settings, UserCircle, LogOut, Wallet, 
@@ -21,6 +22,7 @@ const DEFAULT_WIDTH = 256;
 
 export default function Layout() {
   const { logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
   
   // --- Resizable Sidebar State ---
@@ -42,17 +44,6 @@ export default function Layout() {
       lastExpandedWidth.current = parseInt(savedLast, 10);
     }
   }, []);
-
-  // --- Theme State ---
-  const [isDark, setIsDark] = useState(() => {
-    const savedTheme = localStorage.getItem("monie-track-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return savedTheme === "dark" || (!savedTheme && prefersDark);
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-  }, [isDark]);
 
   // --- Dragging Handlers ---
   const startResizing = useCallback(() => {
@@ -109,21 +100,6 @@ export default function Layout() {
     return () => viewportQuery.removeEventListener("change", updateSidebar);
   }, []);
 
-  // --- Forceful Toggles ---
-  const toggleTheme = () => {
-    setIsDark((prev) => {
-      const newDark = !prev;
-      if (newDark) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('monie-track-theme', 'dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('monie-track-theme', 'light');
-      }
-      return newDark;
-    });
-  };
-
   const toggleSidebar = () => {
     if (sidebarWidth > MIN_WIDTH) {
       // User clicked collapse: Save current width and snap to MIN
@@ -143,13 +119,13 @@ export default function Layout() {
   const isExpandedText = sidebarWidth > 140;
 
   const navItems = [
-    { name: "Dash-Board", path: "/", icon: LayoutDashboard },
-    { name: "Set Budget", path: "/budget", icon: Target },
-    { name: "Create Category", path: "/categories", icon: FolderPlus },
-    { name: "View Transactions", path: "/transactions", icon: ArrowRightLeft },
-    { name: "View Advisory", path: "/advisory", icon: TrendingUp },
-    { name: "Settings", path: "/settings", icon: Settings },
-    { name: "Account", path: "/account", icon: UserCircle },
+    { name: "Dash-Board", path: "/app", icon: LayoutDashboard },
+    { name: "Set Budget", path: "/app/budget", icon: Target },
+    { name: "Create Category", path: "/app/categories", icon: FolderPlus },
+    { name: "View Transactions", path: "/app/transactions", icon: ArrowRightLeft },
+    { name: "View Advisory", path: "/app/advisory", icon: TrendingUp },
+    { name: "Settings", path: "/app/settings", icon: Settings },
+    { name: "Account", path: "/app/account", icon: UserCircle },
   ];
 
   return (

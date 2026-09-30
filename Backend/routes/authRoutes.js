@@ -14,7 +14,8 @@ const {
   forgotPassword, 
   resetPassword,
   getMe,          // ADDED: Profile endpoints
-  updateProfile   // ADDED: Profile endpoints
+  updateProfile,  // ADDED: Profile endpoints
+  changePassword
 } = require('../controllers/authController');
 
 // Import authentication middleware
@@ -29,6 +30,8 @@ const {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
+  changePasswordSchema,
 } = require('../validations/authSchema');
 
 // ==============================================================
@@ -67,7 +70,12 @@ router.get('/me', protect, getMe);
 // @route   PUT /api/auth/profile
 // @desc    Update user profile details
 // @access  Private
-router.put('/profile', protect, updateProfile);
+// @route   PUT /api/auth/password
+// @desc    Change the current user's password
+// @access  Private
+router.put('/password', protect, validate(changePasswordSchema), changePassword);
+
+router.put('/profile', protect, validate(updateProfileSchema), updateProfile);
 
 // ============================================================
 // EXPORT ROUTER

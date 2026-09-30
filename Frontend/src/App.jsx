@@ -6,6 +6,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
@@ -17,6 +18,9 @@ import Transactions from "./pages/Transactions";
 import Categories from "./pages/Categories";
 import Budget from "./pages/Budget";
 import BudgetAdvisory from "./pages/BudgetAdvisory";
+import Landing from "./pages/Landing";
+import Settings from "./pages/Settings";
+import Account from "./pages/Account";
 
 // ==============================================================
 // MAIN COMPONENT
@@ -25,8 +29,10 @@ import BudgetAdvisory from "./pages/BudgetAdvisory";
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Routes>
+          <Route path="/" element={<Landing />} />
           {/* ================================================== */}
           {/* PUBLIC ROUTES */}
           {/* ================================================== */}
@@ -37,7 +43,7 @@ export default function App() {
           {/* PROTECTED ROUTES (Wrapped in Layout Sidebar) */}
           {/* ================================================== */}
           <Route 
-            path="/" 
+            path="/app"
             element={
               <ProtectedRoute>
                 <Layout />
@@ -51,12 +57,15 @@ export default function App() {
             
             {/* FIXED: Moved advisory route into the protected layout! */}
             <Route path="advisory" element={<BudgetAdvisory />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="account" element={<Account />} />
           </Route>
 
           {/* Catch-all route for invalid URLs */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
