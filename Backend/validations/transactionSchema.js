@@ -14,6 +14,8 @@ const createTransactionSchema = Joi.object({
   category: Joi.string().hex().length(24).required().messages({
     'string.length': 'Invalid category ID format'
   }),
+  // Explicitly allow subCategory to pass through validation
+  subCategory: Joi.string().trim().max(100).optional().allow(null, ''),
   type: Joi.string().valid('income', 'expense').required(),
   transactionDate: Joi.date().iso().optional(), // Optional because Mongoose defaults to Date.now
   description: Joi.string().trim().max(255).optional().allow('')
@@ -23,6 +25,8 @@ const createTransactionSchema = Joi.object({
 const updateTransactionSchema = Joi.object({
   amount: Joi.number().greater(0).optional(),
   category: Joi.string().hex().length(24).optional(),
+  // Explicitly allow subCategory updates
+  subCategory: Joi.string().trim().max(100).optional().allow(null, ''),
   type: Joi.string().valid('income', 'expense').optional(),
   transactionDate: Joi.date().iso().optional(),
   description: Joi.string().trim().max(255).optional().allow('')
