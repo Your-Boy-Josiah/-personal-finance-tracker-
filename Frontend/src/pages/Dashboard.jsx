@@ -74,6 +74,10 @@ export default function Dashboard() {
   const [pieModalData, setPieModalData] = useState(null); 
   const [showCalendar, setShowCalendar] = useState(false);
   const [isBlurred, setIsBlurred] = useState(false); 
+  const [selectedDashboardMonth, setSelectedDashboardMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   
   // Quick Action & Sync States
   const [quickAction, setQuickAction] = useState(null);
@@ -81,11 +85,12 @@ export default function Dashboard() {
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
   const [quickForm, setQuickForm] = useState({ amount: "", category: "", description: "" });
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (categoryMonth = selectedDashboardMonth) => {
     try {
       const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const params = new URLSearchParams({ timezone: userTz, categoryMonth });
       const [dashRes, catRes] = await Promise.all([
-        api.get(`/dashboard/summary?timezone=${userTz}`),
+        api.get(`/dashboard/summary?${params.toString()}`),
         api.get('/categories')
       ]);
       setSummary(dashRes.data.data || dashRes.data);
@@ -137,21 +142,37 @@ export default function Dashboard() {
   // --- Core Metrics Math ---
   const income = summary?.totalIncome || 0;
   const expenses = summary?.totalExpenses || 0;
+  const budgetExpenses = summary?.currentMonthExpenses ?? expenses;
   const netProfit = income - expenses; 
   
   const realBudgetLimit = summary?.totalBudgetLimit || 0;
   const hasBudgetLimit = realBudgetLimit > 0;
-  const availableBalance = hasBudgetLimit ? (realBudgetLimit - expenses) : netProfit;
-  const budgetPercentage = hasBudgetLimit ? Math.round(Math.min((expenses / realBudgetLimit) * 100, 100)) : 0;
+  const budgetPercentage = hasBudgetLimit ? Math.round(Math.min((budgetExpenses / realBudgetLimit) * 100, 100)) : 0;
   const isOverBudget = budgetPercentage >= 100;
   
   const recentTransactions = summary?.recentTransactions || [];
   const dailyData = summary?.dailyData || [];
-  const currentMonthName = new Date().toLocaleString('default', { month: 'short' });
-  const barData = summary?.monthlyData?.length > 0 ? summary.monthlyData : [{ month: currentMonthName, income, expenses }];
+  const now = new Date();
+  const currentMonthName = now.toLocaleString('default', { month: 'short' });
+  const currentYear = now.getFullYear();
+  const currentYearData = summary?.monthlyData?.filter(month => month.year === currentYear) || [];
+  const barData = currentYearData.length > 0
+    ? currentYearData
+    : [{ month: currentMonthName, income, expenses }];
 
   const isCategoryEmpty = !summary?.categorySpending?.length;
   const categoryData = isCategoryEmpty ? [{ name: 'No Data', value: 1 }] : summary.categorySpending;
+  const selectedMonthNumber = Number(selectedDashboardMonth.slice(5, 7));
+  const selectedMonthName = new Date(currentYear, selectedMonthNumber - 1).toLocaleString('default', { month: 'short' });
+  const selectedMonthData = summary?.monthlyData?.find(month => month.year === currentYear && month.monthNumber === selectedMonthNumber);
+  const availableBalance = (selectedMonthData?.income || 0) - (selectedMonthData?.expenses || 0);
+
+  const selectDashboardMonth = (monthNumber) => {
+    const monthKey = `${currentYear}-${String(monthNumber).padStart(2, '0')}`;
+    setSelectedDashboardMonth(monthKey);
+    setShowCalendar(false);
+    fetchDashboardData(monthKey);
+  };
 
   const handlePieClick = (payload) => {
     if (payload.subCategories && payload.subCategories.length > 0) {
@@ -176,6 +197,8 @@ export default function Dashboard() {
   const filteredCategories = categories.filter(c => c.type === quickAction);
   const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const avatarUrl = getAvatarUrl(user?.avatar);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="p-4 md:p-6 mx-auto max-w-[1600px] relative">
@@ -251,33 +274,36 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setShowCalendar(false)}>
           <div className="w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4 dark:border-neutral-800">
-              <h2 className="text-xl font-bold dark:text-white">Annual Financial Catalog</h2>
+              <h2 className="text-xl font-bold dark:text-white">Annual Financial Catalog · {currentYear}</h2>
               <button onClick={() => setShowCalendar(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {allMonths.map((monthStr, idx) => {
-                const monthData = summary?.monthlyData?.find(m => m.month === monthStr);
-                const isCurrent = monthStr === currentMonthName;
+                const monthNumber = idx + 1;
+                const monthKey = `${currentYear}-${String(monthNumber).padStart(2, '0')}`;
+                const monthData = summary?.monthlyData?.find(m => m.monthNumber === monthNumber && m.year === currentYear);
+                const isCurrent = monthKey === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const isSelected = selectedDashboardMonth === monthKey;
                 
                 return (
-                  <div key={idx} className={`p-4 rounded-xl border ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-900/30'}`}>
-                    <h3 className="font-bold text-sm mb-3 flex items-center justify-between dark:text-white">
+                  <button key={idx} type="button" onClick={() => selectDashboardMonth(monthNumber)} aria-pressed={isSelected} aria-label={`View ${monthStr} ${currentYear} expenses`} className={`w-full p-4 rounded-xl border text-left transition-colors ${isSelected ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-900/30 hover:border-indigo-300 dark:hover:border-indigo-700'}`}>
+                    <span className="mb-3 flex items-center justify-between text-sm font-bold dark:text-white">
                       {monthStr}
                       {isCurrent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">Current</span>}
-                    </h3>
+                    </span>
                     {monthData ? (
-                      <div className="space-y-2 text-xs">
-                        <div className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">In:</span> <span className="font-medium text-emerald-600 dark:text-emerald-400">₦{monthData.income.toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">Out:</span> <span className="font-medium text-rose-600 dark:text-rose-400">₦{monthData.expenses.toLocaleString()}</span></div>
-                        <div className="pt-2 mt-2 border-t border-slate-200 dark:border-neutral-700 flex justify-between font-bold dark:text-white">
+                      <span className="block space-y-2 text-xs">
+                        <span className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">In:</span> <span className="font-medium text-emerald-600 dark:text-emerald-400">₦{monthData.income.toLocaleString()}</span></span>
+                        <span className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">Out:</span> <span className="font-medium text-rose-600 dark:text-rose-400">₦{monthData.expenses.toLocaleString()}</span></span>
+                        <span className="mt-2 flex justify-between border-t border-slate-200 pt-2 font-bold dark:border-neutral-700 dark:text-white">
                           <span>Net:</span> <span>₦{(monthData.income - monthData.expenses).toLocaleString()}</span>
-                        </div>
-                      </div>
+                        </span>
+                      </span>
                     ) : (
-                      <div className="h-[80px] flex items-center justify-center text-xs text-slate-400 dark:text-neutral-600">No data</div>
+                      <span className="flex h-[80px] items-center justify-center text-xs text-slate-400 dark:text-neutral-600">No data</span>
                     )}
-                  </div>
+                  </button>
                 )
               })}
             </div>
@@ -327,8 +353,8 @@ export default function Dashboard() {
       {/* HEADER SECTION with Privacy, Calendar & User Avatar */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold dark:text-white">Financial overview</h1>
-          <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">Track income, spending and account growth.</p>
+          <h1 className="text-xl font-bold dark:text-white">{greeting}, {user?.firstName || "there"}</h1>
+          <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">Here’s your financial overview.</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -376,7 +402,7 @@ export default function Dashboard() {
             <div onClick={() => setActiveModal('profit')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/30 transition-all duration-300">
               <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Net profit</p>
               <div className="flex items-center gap-2 mt-1">
-                <h3 className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-300 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(netProfit.toLocaleString())}</h3>
+                <h3 className={`text-xl font-bold transition-colors ${netProfit > 0 ? 'text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-300' : netProfit < 0 ? 'text-rose-600 dark:text-rose-400 group-hover:text-rose-500' : 'text-slate-600 dark:text-neutral-300'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(netProfit.toLocaleString())}</h3>
                 {netProfit > 0 && <TrendingUp size={16} className="text-emerald-500" />}
               </div>
             </div>
@@ -390,7 +416,8 @@ export default function Dashboard() {
             
             <div className={`bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm h-[300px] relative hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col ${isBlurred ? 'filter blur-[3px] select-none pointer-events-none' : ''}`}>
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-bold dark:text-white truncate pr-2">Expenses by Category</h3>
+                <h3 className="text-sm font-bold dark:text-white truncate pr-2">Expenses by Category · {selectedMonthName} {currentYear}</h3>
+                <Link to={`/app/transactions?month=${selectedDashboardMonth}`} className="shrink-0 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">Transactions</Link>
               </div>
               <div className="flex-1 relative">
                 <MemoizedPieChart data={categoryData} isEmpty={isCategoryEmpty} onPieClick={handlePieClick} />
@@ -491,7 +518,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mb-4 leading-relaxed">
-                  Spent <strong className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(expenses.toLocaleString())}</strong> of <span className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(realBudgetLimit.toLocaleString())}</span>
+                  Spent <strong className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(budgetExpenses.toLocaleString())}</strong> of <span className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(realBudgetLimit.toLocaleString())}</span>
                 </p>
                 <div className="w-full h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-1000 ${isOverBudget ? 'bg-rose-500' : budgetPercentage > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${budgetPercentage}%` }}></div>
