@@ -24,7 +24,6 @@ router.route('/')
   .post(protect, validate(categorySchema), createCategory);
 
 router.route('/:id')
-  // Use the relaxed update schema here
   .put(protect, validate(updateCategorySchema), updateCategory)
   .delete(protect, deleteCategory);
 

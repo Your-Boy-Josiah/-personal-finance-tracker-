@@ -5,9 +5,11 @@
 // ===============================================================
 
 import { useState, useRef, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import { Camera, Landmark, Trash2, Plus, CheckCircle2, X, Info } from "lucide-react";
+import { getAvatarUrl } from "../utils/avatar";
 
 const getProfileValues = (user) => {
   const nameParts = user?.fullName?.split(" ") || [];
@@ -21,21 +23,14 @@ const getProfileValues = (user) => {
 const inputClassName = "mt-1.5 block w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 const labelClassName = "block text-sm font-medium text-slate-700 dark:text-neutral-300";
 
-// Bulletproof Avatar URL handler with safe fallbacks
-const getAvatarUrl = (path) => {
-  if (!path) return null;
-  if (path.startsWith('http') || path.startsWith('blob')) return path;
-  
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-  const baseUrl = apiBaseUrl.replace('/api', '');
-  
-  return `${baseUrl}${path}`;
-};
+// Helper to safely route the image to your backend port
 
 export default function Account() {
   // Added setUser so we can update the global context instantly
-  const { user, setUser, updateProfile, changePassword } = useAuth();
+  const { user, setUser, updateProfile, updateUser, changePassword } = useAuth();
   const fileInputRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // States
   const [profile, setProfile] = useState(() => getProfileValues(user));
@@ -51,30 +46,41 @@ export default function Account() {
   const [messages, setMessages] = useState({ profile: "", password: "", avatar: "" });
   const [errors, setErrors] = useState({ profile: "", password: "", avatar: "" });
 
-  // Bank Management States
-  const [banks, setBanks] = useState([]);
+  const [bankConnecting, setBankConnecting] = useState(false);
+  const [bankError, setBankError] = useState("");
   const [showBankModal, setShowBankModal] = useState(false);
+  const [bankMessage, setBankMessage] = useState("");
   const [newBank, setNewBank] = useState({ name: "", type: "Savings" });
+  const bankCode = new URLSearchParams(location.search).get("code") || new URLSearchParams(location.search).get("publicToken");
 
-  // Sync Banks with LocalStorage on Load
   useEffect(() => {
-    try {
-      const savedBanks = localStorage.getItem("user_connected_banks");
-      if (savedBanks) {
-        setBanks(JSON.parse(savedBanks));
-      } else {
-        // Default placeholders if none exist
-        const defaults = [
-          { id: 1, name: "Guaranty Trust Bank", type: "Savings", status: "active" },
-          { id: 2, name: "Access Bank", type: "Current", status: "active" }
-        ];
-        setBanks(defaults);
-        localStorage.setItem("user_connected_banks", JSON.stringify(defaults));
+    if (!bankCode) return undefined;
+
+    let isCurrent = true;
+    const finishBankLink = async () => {
+      setBankConnecting(true);
+      setBankMessage("");
+      try {
+        await api.post("/bank/exchange-token", { publicToken: bankCode });
+        if (!isCurrent) return;
+
+        updateUser({ bankConnected: true });
+        setBankMessage("Bank account connected successfully.");
+        setBankConnecting(false);
+        const params = new URLSearchParams(location.search);
+        params.delete("code");
+        params.delete("publicToken");
+        navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+      } catch (requestError) {
+        if (isCurrent) setBankMessage(requestError.response?.data?.message || "Could not complete the bank connection.");
+      } finally {
+        if (isCurrent) setBankConnecting(false);
       }
-    } catch (e) {
-      console.error("Failed to load banks");
-    }
-  }, []);
+    };
+
+    finishBankLink();
+    return () => { isCurrent = false; };
+  }, [bankCode, location.pathname, location.search, navigate, updateUser]);
 
   // --- Handlers ---
   const handleAvatarChange = async (event) => {
@@ -93,6 +99,9 @@ export default function Account() {
       const response = await api.put("/auth/avatar", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
+      updateUser(response.data.data);
+      setAvatarPreview(getAvatarUrl(response.data.data.avatar));
+      setMessages((current) => ({ ...current, avatar: "Profile picture updated." }));
       
       // Update context directly instead of forcing a page reload
       setUser(response.data.data);
@@ -100,6 +109,7 @@ export default function Account() {
       setMessages({ ...messages, avatar: "Avatar updated successfully." });
     } catch (err) {
       setErrors({ ...errors, avatar: err.response?.data?.message || "Failed to upload image." });
+    } finally {
       setIsUploadingAvatar(false);
     }
   };
@@ -136,26 +146,18 @@ export default function Account() {
     setPasswordSaving(false);
   };
 
-  // --- Bank Handlers ---
-  const handleAddBank = (e) => {
-    e.preventDefault();
-    const bankToAdd = {
-      id: Date.now(), 
-      name: newBank.name,
-      type: newBank.type,
-      status: "active"
-    };
-    const updatedBanks = [...banks, bankToAdd];
-    setBanks(updatedBanks);
-    localStorage.setItem("user_connected_banks", JSON.stringify(updatedBanks));
-    setShowBankModal(false);
-    setNewBank({ name: "", type: "Savings" });
-  };
-
-  const handleDeleteBank = (id) => {
-    const updatedBanks = banks.filter(bank => bank.id !== id);
-    setBanks(updatedBanks);
-    localStorage.setItem("user_connected_banks", JSON.stringify(updatedBanks));
+  const handleConnectBank = async () => {
+    setBankConnecting(true);
+    setBankError("");
+    setBankMessage("");
+    try {
+      const response = await api.post("/bank/link-token");
+      if (!response.data.monoUrl) throw new Error("Mono did not return a link URL.");
+      window.location.assign(response.data.monoUrl);
+    } catch (requestError) {
+      setBankError(requestError.response?.data?.message || requestError.message || "Could not start the bank connection.");
+      setBankConnecting(false);
+    }
   };
 
   // --- UI ---
@@ -286,55 +288,34 @@ export default function Account() {
         </form>
       </section>
 
-      {/* SECTION 3: CONNECTED BANKS */}
+      {/* SECTION 3: CONNECTED BANK */}
       <section className="max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-base font-semibold dark:text-white flex items-center gap-2">
-              Connected Institutions 
+        <div className="mb-6">
+          <h2 className="text-base font-semibold dark:text-white flex items-center gap-2">
+              Bank Connection 
               {/*Honesty badge for evaluators */}
               <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-neutral-800 dark:text-neutral-400">
                 <Info size={10} /> UI Demo
               </span>
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Manage your linked bank accounts for automatic transaction syncing.</p>
-          </div>
-          <button onClick={() => setShowBankModal(true)} className="hidden sm:inline-flex items-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20">
-            <Plus size={16} /> Link Bank
-          </button>
+          <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Link a bank securely through Mono to enable transaction syncing.</p>
         </div>
 
-        <div className="space-y-3">
-          {banks.length === 0 ? (
-            <div className="text-center p-6 text-sm text-slate-500 dark:text-neutral-400 border border-dashed border-slate-300 dark:border-neutral-700 rounded-lg">
-              No institutions connected yet.
+        {user?.bankConnected ? (
+          <div className="mb-4 flex items-center gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={20} />
+            <div>
+              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Bank account connected</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400">Transaction sync is available.</p>
             </div>
-          ) : (
-            banks.map((bank) => (
-              <div key={bank.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-4 dark:border-neutral-700 dark:bg-neutral-900/50">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
-                    <Landmark size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      {bank.name}
-                      <CheckCircle2 size={14} className="text-emerald-500" />
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-neutral-400">{bank.type} Account • Auto-sync Active</p>
-                  </div>
-                </div>
-                <button onClick={() => handleDeleteBank(bank.id)} className="text-slate-400 hover:text-rose-600 transition-colors dark:hover:text-rose-400" title="Disconnect Bank">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            ))
-          )}
-          
-          <button onClick={() => setShowBankModal(true)} className="sm:hidden w-full mt-4 flex items-center justify-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20">
-            <Plus size={16} /> Link New Bank
+          </div>
+        ) : (
+          <button type="button" onClick={handleConnectBank} disabled={bankConnecting} className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60">
+            <Plus size={16} /> {bankConnecting ? "Connecting..." : "Connect via Mono"}
           </button>
-        </div>
+        )}
+        {bankMessage && <p role="status" className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">{bankMessage}</p>}
+        {bankError && <p role="alert" className="mt-3 text-sm text-rose-600 dark:text-rose-400">{bankError}</p>}
       </section>
 
     </div>

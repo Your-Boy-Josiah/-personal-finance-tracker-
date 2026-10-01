@@ -59,6 +59,9 @@ describe('End-to-End Security & Cascade Audit', () => {
     expect(res.statusCode).toBe(201);
     expect(res.body.token).toBeDefined();
     expect(res.body.firstName).toBe('Audit');
+    expect(res.body.avatar).toBeNull();
+    expect(res.body.bankConnected).toBe(false);
+    expect(res.body.notificationPreferences.emailSummaryReports).toBe(true);
     userToken = res.body.token; // Save token for protected routes
 
     const profileRes = await request(app)
@@ -69,6 +72,15 @@ describe('End-to-End Security & Cascade Audit', () => {
     expect(profileRes.statusCode).toBe(200);
     expect(profileRes.body.data.baseCurrency).toBe('USD');
     expect(profileRes.body.data.monthlyIncome).toBe(6500);
+
+    const preferencesRes = await request(app)
+      .put('/api/auth/profile')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ notificationPreferences: { emailSummaryReports: false, budgetBreachWarnings: false } });
+
+    expect(preferencesRes.statusCode).toBe(200);
+    expect(preferencesRes.body.data.notificationPreferences.emailSummaryReports).toBe(false);
+    expect(preferencesRes.body.data.notificationPreferences.budgetBreachWarnings).toBe(false);
 
     const passwordRes = await request(app)
       .put('/api/auth/password')
@@ -83,6 +95,8 @@ describe('End-to-End Security & Cascade Audit', () => {
 
     expect(loginRes.statusCode).toBe(200);
     expect(loginRes.body.monthlyIncome).toBe(6500);
+    expect(loginRes.body.avatar).toBe(profileRes.body.data.avatar);
+    expect(loginRes.body.notificationPreferences.emailSummaryReports).toBe(false);
   });
 
   it('should create a custom category', async () => {
@@ -98,6 +112,17 @@ describe('End-to-End Security & Cascade Audit', () => {
     expect(res.statusCode).toBe(201);
     expect(res.body.success).toBe(true);
     testCategoryId = res.body.data._id;
+  });
+
+  it('should allow a color-only category update', async () => {
+    const res = await request(app)
+      .put(`/api/categories/${testCategoryId}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ color: '#fff' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.color).toBe('#fff');
+    expect(res.body.data.name).toBe('Dining');
   });
 
   it('should safely delete the category and cascade (Task E-2)', async () => {

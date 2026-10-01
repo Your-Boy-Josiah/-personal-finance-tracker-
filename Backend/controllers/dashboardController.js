@@ -12,6 +12,11 @@ const getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id;
     const userTz = req.query.timezone || 'UTC';
+    const categoryMonthMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(req.query.categoryMonth || '');
+
+    if (req.query.categoryMonth && !categoryMonthMatch) {
+      return res.status(400).json({ success: false, message: 'categoryMonth must use YYYY-MM format' });
+    }
 
     // Get Totals (Income, Expenses, Balance)
     const totals = await Transaction.aggregate([
@@ -19,13 +24,29 @@ const getDashboardSummary = async (req, res) => {
       { $group: {
           _id: null,
           totalIncome: { $sum: { $cond: [{$eq: ["$type", "income"] }, "$amount", 0] } },
-          totalExpenses: { $sum: { $cond: [{$eq: ["$type", "expense"] }, "$amount", 0] } }
+          totalExpenses: { $sum: { $cond: [{$eq: ["$type", "expense"] }, "$amount", 0] } },
+          currentMonthExpenses: { $sum: { $cond: [
+            { $and: [
+              { $eq: ["$type", "expense"] },
+              { $eq: [
+                { $month: { date: "$transactionDate", timezone: userTz } },
+                { $month: { date: "$$NOW", timezone: userTz } }
+              ] },
+              { $eq: [
+                { $year: { date: "$transactionDate", timezone: userTz } },
+                { $year: { date: "$$NOW", timezone: userTz } }
+              ] }
+            ] },
+            "$amount",
+            0
+          ] } }
         }
       }
     ]);
 
     const totalIncome = totals[0]?.totalIncome || 0;
     const totalExpenses = totals[0]?.totalExpenses || 0;
+    const currentMonthExpenses = totals[0]?.currentMonthExpenses || 0;
     const currentBalance = totalIncome - totalExpenses;
 
     // Fetch User's Total Budget Limit
@@ -52,7 +73,21 @@ const getDashboardSummary = async (req, res) => {
 
     // Category Spending (Drill-Down Setup: Group by category AND subCategory)
     const categorySpendingRaw = await Transaction.aggregate([
-      { $match: { user: userId, type: 'expense' } },
+      { $match: {
+          user: userId,
+          type: 'expense',
+          $expr: { $and: [
+            { $eq: [
+              { $month: { date: "$transactionDate", timezone: userTz } },
+              categoryMonthMatch ? Number(categoryMonthMatch[2]) : { $month: { date: "$$NOW", timezone: userTz } }
+            ] },
+            { $eq: [
+              { $year: { date: "$transactionDate", timezone: userTz } },
+              categoryMonthMatch ? Number(categoryMonthMatch[1]) : { $year: { date: "$$NOW", timezone: userTz } }
+            ] }
+          ] }
+        }
+      },
       { $group: { 
           _id: { category: "$category", subCategory: "$subCategory" }, 
           value: { $sum: "$amount" } 
@@ -99,18 +134,21 @@ const getDashboardSummary = async (req, res) => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthlyData = monthlyDataRaw.map(data => ({
       month: monthNames[data._id.month - 1],
+      monthNumber: data._id.month,
+      year: data._id.year,
       income: data.income,
       expenses: data.expenses
     }));
 
     // Daily Trend Data (Last 30 Days) for Pop-Up Modals
-    const thirtyDaysAgo = new Date();
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const dailyDataRaw = await Transaction.aggregate([
       { $match: { 
           user: userId,
-          transactionDate: { $gte: thirtyDaysAgo } 
+          transactionDate: { $gte: thirtyDaysAgo, $lte: now }
         } 
       },
       { $group: {
@@ -127,7 +165,12 @@ const getDashboardSummary = async (req, res) => {
     ]);
 
     const dailyData = dailyDataRaw.map(data => ({
-      date: `${monthNames[data._id.month - 1]} ${data._id.day}`,
+      date: new Date(Date.UTC(data._id.year, data._id.month - 1, data._id.day)).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC'
+      }),
       income: data.income,
       expenses: data.expenses,
       profit: data.income - data.expenses
@@ -139,7 +182,8 @@ const getDashboardSummary = async (req, res) => {
       data: {
         totalIncome,
         totalExpenses,
-        totalBalance: currentBalance, 
+        currentMonthExpenses,
+        totalBalance: currentBalance, // Actual Net Profit
         totalBudgetLimit, 
         recentTransactions,
         categorySpending,

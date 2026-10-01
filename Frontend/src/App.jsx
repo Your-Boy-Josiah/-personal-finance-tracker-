@@ -4,7 +4,7 @@
 //  Handles public/protected route separation and global context.
 // ===============================================================
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -26,6 +26,11 @@ import Account from "./pages/Account";
 // MAIN COMPONENT
 // ==============================================================
 
+function BankCallbackRedirect() {
+  const location = useLocation();
+  return <Navigate to={{ pathname: "/app/account", search: location.search }} replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -38,6 +43,7 @@ export default function App() {
           {/* ================================================== */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/bank-callback" element={<BankCallbackRedirect />} />
           
           {/* ================================================== */}
           {/* PROTECTED ROUTES (Wrapped in Layout Sidebar) */}

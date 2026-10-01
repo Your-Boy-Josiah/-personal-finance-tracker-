@@ -50,7 +50,10 @@ app.use(express.json()); // Parses incoming JSON payloads in request bodies
 app.use("/api", apiLimiter); // Applies rate limiting to all /api routes
 app.use('/api/alerts', require('./routes/alertRoutes'));
 // Make uploads directory accessible to the frontend
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // ==============================================================
 // API ROUTES

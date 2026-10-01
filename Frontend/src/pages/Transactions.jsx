@@ -5,6 +5,7 @@
 // ===============================================================
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,16 +16,11 @@ import {
   X,
 } from "lucide-react";
 import api from "../services/api";
+import { formatDateOnly, getToday, toDateInputValue } from "../utils/dates";
 
 // ==============================================================
 // HELPER FUNCTIONS
 // ==============================================================
-
-const getToday = () => {
-  const today = new Date();
-  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-  return today.toISOString().slice(0, 10);
-};
 
 const emptyForm = () => ({
   type: "expense",
@@ -45,22 +41,15 @@ const transactionToForm = (transaction) => ({
   subCategory: transaction.subCategory || "",
   description: transaction.description || "",
   transactionDate: transaction.transactionDate
-    ? new Date(transaction.transactionDate).toISOString().slice(0, 10)
+    ? toDateInputValue(transaction.transactionDate)
     : getToday(),
 });
 
-const formatDate = (value) => {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-};
+const formatDate = (value) => formatDateOnly(value, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
 const formatAmount = (amount) => {
   return `₦${Number(amount || 0).toLocaleString(undefined, {
@@ -79,6 +68,9 @@ const fetchTransactionCategories = async () => {
 // ==============================================================
 
 const Transactions = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedMonth = searchParams.get("month") || "";
+
   // --- State Management ---
   const [transactions, setTransactions] = useState([]);
   const [pagination, setPagination] = useState({
@@ -126,7 +118,12 @@ const Transactions = () => {
       setError("");
 
       try {
-        const response = await api.get(`/transactions?page=${page}&limit=10`);
+        const params = new URLSearchParams({ page: String(page), limit: "10" });
+        if (selectedMonth) {
+          params.set("month", selectedMonth);
+          params.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+        }
+        const response = await api.get(`/transactions?${params.toString()}`);
         if (!isCurrent) return;
 
         setTransactions(response.data.data || []);
@@ -151,7 +148,7 @@ const Transactions = () => {
     return () => {
       isCurrent = false;
     };
-  }, [page, refreshKey]);
+  }, [page, refreshKey, selectedMonth]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -289,7 +286,37 @@ const Transactions = () => {
             Review your income and expenses.
           </p>
         </div>
-        <div className="flex items-center justify-between gap-3 sm:justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+          <label htmlFor="transaction-month" className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-neutral-300">
+            Month
+            <input
+              id="transaction-month"
+              type="month"
+              value={selectedMonth}
+              onChange={(event) => {
+                const nextParams = new URLSearchParams(searchParams);
+                if (event.target.value) nextParams.set("month", event.target.value);
+                else nextParams.delete("month");
+                setSearchParams(nextParams, { replace: true });
+                setPage(1);
+              }}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            />
+          </label>
+          {selectedMonth && (
+            <button
+              type="button"
+              onClick={() => {
+                const nextParams = new URLSearchParams(searchParams);
+                nextParams.delete("month");
+                setSearchParams(nextParams, { replace: true });
+                setPage(1);
+              }}
+              className="text-xs font-medium text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white"
+            >
+              All months
+            </button>
+          )}
           <p className="text-sm text-slate-500 dark:text-neutral-400">
             {pagination.totalRecords} {pagination.totalRecords === 1 ? "record" : "records"}
           </p>

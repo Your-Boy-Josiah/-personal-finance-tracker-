@@ -1,6 +1,6 @@
 // ===============================================================
 //  BudgetAdvisory.jsx
-//  AI-driven intelligent financial insights. Grades financial health,
+//  Rule-based financial insights. Grades financial health,
 //  categorizes spending, and calculates daily survival limits.
 // ===============================================================
 
@@ -51,7 +51,7 @@ const BudgetAdvisory = () => {
     return () => { isCurrent = false; };
   }, []);
 
-  // --- Dynamic AI Calculations ---
+  // --- Financial health calculations ---
   const today = new Date();
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const daysLeft = daysInMonth - today.getDate() + 1; // Inclusive of today
@@ -86,7 +86,7 @@ const BudgetAdvisory = () => {
   // RENDER UI
   // ==============================================================
 
-  if (loading) return <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500"><div className="flex items-center gap-3"><div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div><p>AI Engine analyzing your spending...</p></div></div>;
+  if (loading) return <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500"><div className="flex items-center gap-3"><div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div><p>Reviewing your spending patterns...</p></div></div>;
   if (error) return <div className="mx-auto max-w-4xl p-8 text-center text-sm text-rose-600 dark:text-rose-400">{error}</div>;
   if (!data) return null;
 
@@ -99,7 +99,7 @@ const BudgetAdvisory = () => {
       <header className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-            <BrainCircuit size={14} /> AI Intelligence Layer
+            <BrainCircuit size={14} /> Rules-Based Insights
           </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Financial Advisory</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">

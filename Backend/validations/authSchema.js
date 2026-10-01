@@ -56,6 +56,10 @@ const updateProfileSchema = Joi.object({
   email: Joi.string().email().trim().lowercase().min(6).max(60),
   baseCurrency: Joi.string().valid('NGN', 'USD', 'EUR', 'GBP'),
   monthlyIncome: Joi.number().min(0),
+  notificationPreferences: Joi.object({
+    emailSummaryReports: Joi.boolean(),
+    budgetBreachWarnings: Joi.boolean(),
+  }).min(1),
 }).min(1);
 
 const changePasswordSchema = Joi.object({

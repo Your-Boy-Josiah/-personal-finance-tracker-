@@ -20,7 +20,7 @@ const getTransactions = async (req, res) => {
     // Extract query parameters with safe fallbacks (default: page 1, 10 items)
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
-    const { type, category, startDate, endDate, search } = req.query;
+    const { type, category, startDate, endDate, search, month, timezone = 'UTC' } = req.query;
     
     // Calculate how many documents to skip based on the current page
     const skip = (page - 1) * limit;
@@ -32,6 +32,29 @@ const getTransactions = async (req, res) => {
     if (category) query.category = category;
     if (startDate && endDate) {
       query.transactionDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+    if (month) {
+      const monthMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
+      if (!monthMatch) {
+        return res.status(400).json({ success: false, message: 'month must use YYYY-MM format' });
+      }
+
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: timezone });
+      } catch {
+        return res.status(400).json({ success: false, message: 'Invalid timezone' });
+      }
+
+      query.$expr = { $and: [
+        { $eq: [
+          { $month: { date: '$transactionDate', timezone } },
+          Number(monthMatch[2])
+        ] },
+        { $eq: [
+          { $year: { date: '$transactionDate', timezone } },
+          Number(monthMatch[1])
+        ] }
+      ] };
     }
     if (search) {
       query.description = { $regex: search, $options: 'i' };

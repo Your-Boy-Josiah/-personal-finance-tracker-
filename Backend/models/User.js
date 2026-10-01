@@ -7,6 +7,11 @@
 
 const PM = require("mongoose");
 
+const notificationPreferencesSchema = new PM.Schema({
+  emailSummaryReports: { type: Boolean, default: true },
+  budgetBreachWarnings: { type: Boolean, default: true },
+}, { _id: false });
+
 // ==============================================================
 // SCHEMA DEFINITION
 // ==============================================================
@@ -50,6 +55,10 @@ const userSchema = new PM.Schema(
     monthlyIncome: {
       type: Number,
       default: 0, // Baseline income for budget comparisons without requiring manual transaction entries
+    },
+    notificationPreferences: {
+      type: notificationPreferencesSchema,
+      default: () => ({}),
     },
 
     // 3. Account Management & Security

@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, X, Tag, ArrowDownRight, ArrowUpRight, AlertTriangle, Pencil, Store } from "lucide-react";
 import api from "../services/api";
+import { formatDateOnly } from "../utils/dates";
 
 const PRESET_COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308',
@@ -501,12 +502,12 @@ const Categories = () => {
                           <p className="font-semibold text-slate-900 dark:text-white">{tx.description || 'Unnamed Transaction'}</p>
                           <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
                             {/* Replaced date-fns with native JavaScript date formatting */}
-                            <span>{new Date(tx.transactionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            <span>{formatDateOnly(tx.transactionDate, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className={`font-bold ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
-                            {tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
+                            {tx.type === 'income' ? '+' : '-'}₦{Number(tx.amount || 0).toLocaleString()}
                           </p>
                         </div>
                       </div>
