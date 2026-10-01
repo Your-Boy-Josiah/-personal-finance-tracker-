@@ -8,6 +8,12 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
+# Ignore local user uploads / profile images
+uploads/
+Backend/uploads/
+**/uploads/
+avatars/
+
 # ==========================================
 # SECRETS & ENVIRONMENT VARIABLES
 # ==========================================

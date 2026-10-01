@@ -1,6 +1,8 @@
 # Dependency directories
 node_modules/
-
+upload.log
+uploads/
+avatars/
 # Environment variables (SECURITY CRITICAL)
 .env
 .env.local
