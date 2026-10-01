@@ -1,6 +1,7 @@
 # ==========================================
 # DEPENDENCIES
 # ==========================================
+
 # Ignore Node modules for both root, backend, and frontend
 node_modules/
 /Backend/node_modules/
@@ -8,9 +9,16 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
+# Ignore local user uploads / profile images
+uploads/
+Backend/uploads/
+**/uploads/
+avatars/
+
 # ==========================================
 # SECRETS & ENVIRONMENT VARIABLES
 # ==========================================
+
 # CRITICAL: Never commit environment files.
 .env
 .env.local
@@ -22,12 +30,14 @@ yarn-error.log
 # ==========================================
 # FRONTEND BUILD ARTIFACTS (React/Vite)
 # ==========================================
+
 /Frontend/dist/
 /Frontend/build/
 
 # ==========================================
 # OS & EDITOR METADATA
 # ==========================================
+
 .DS_Store
 Thumbs.db
 .vscode/
