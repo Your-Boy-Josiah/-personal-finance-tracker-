@@ -13,7 +13,7 @@ const PM = require("mongoose");
 
 const userSchema = new PM.Schema(
   {
-    // 1. Core Requirements (Authentication & Identity)
+    // Core Requirements (Authentication & Identity)
     firstName: {
       type: String,
       required: [true, "First name is required"],
@@ -37,8 +37,11 @@ const userSchema = new PM.Schema(
       required: [true, "Password is required"],
       // Note: Business logic in the controller must hash this using bcrypt before saving
     },
-
-    // 2. Finance-Specific Optionals
+    avatar: { 
+      type: String,
+      default: null 
+    },
+    // Finance-Specific Optionals
     baseCurrency: {
       type: String,
       enum: ["NGN", "USD", "EUR", "GBP"],
