@@ -1,7 +1,6 @@
 // ===============================================================
 //  categorySchema.js
 //  Joi validation schemas for transaction categories.
-//  Ensures category names, types, hex colors, and subCategories are valid.
 // ===============================================================
 
 const Joi = require('joi');
@@ -16,14 +15,20 @@ const categorySchema = Joi.object({
   color: Joi.string().pattern(/^#([0-9A-F]{3}){1,2}$/i).optional().messages({
     'string.pattern.base': 'Color must be a valid hex code (e.g., #FF5733)'
   }),
-  // NEW: Explicitly allow the subCategories array through the validation gate
   subCategories: Joi.array().items(Joi.string().trim()).optional().default([])
-  
-  // NOTE: 'user' is intentionally excluded here. 
-  // It will be attached by the authMiddleware, not the request body.
 });
 
-// ============================================================
-// EXPORT SCHEMAS
-// ============================================================
-module.exports = categorySchema;
+// Relaxed schema for partial updates
+const updateCategorySchema = Joi.object({
+  name: Joi.string().trim().min(2).max(100).optional(),
+  type: Joi.string().valid('income', 'expense').optional(),
+  color: Joi.string().pattern(/^#([0-9A-F]{3}){1,2}$/i).optional(),
+  subCategories: Joi.array().items(Joi.string().trim()).optional()
+}).min(1).messages({
+  'object.min': 'At least one field must be provided to update'
+});
+
+module.exports = {
+  categorySchema,
+  updateCategorySchema
+};
