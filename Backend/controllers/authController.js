@@ -114,9 +114,10 @@ const loginUser = async (req, res) => {
         lastName: user.lastName,
         fullName: user.fullName,
         email: user.email,
-        role: user.role,                 // UPDATED: Include role
-        baseCurrency: user.baseCurrency, // UPDATED: Include currency
+        role: user.role,                 
+        baseCurrency: user.baseCurrency, 
         monthlyIncome: user.monthlyIncome,
+        avatar: user.avatar,            
         token: generateToken(user._id),
       });
     } else {
