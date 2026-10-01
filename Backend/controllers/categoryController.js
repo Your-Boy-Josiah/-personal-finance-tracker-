@@ -7,6 +7,7 @@
 const mongoose = require('mongoose');
 const Category = require('../models/Category');
 const Transaction = require('../models/Transaction');
+const Budget = require('../models/Budget');
 
 // ==============================================================
 // CONTROLLER FUNCTIONS
@@ -66,13 +67,18 @@ const updateCategory = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
-    // 7-POINT PLAN FIX: Removed the lock on system categories.
-    // Now only blocks access if the category belongs to a DIFFERENT specific user.
-    if (category.user !== null && category.user.toString() !== userId.toString()) {
-      return res.status(401).json({ success: false, message: 'Not authorized to edit this category' });
+    if (!category.user || category.user.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to edit this category' });
     }
 
     const { name, type, color, subCategories } = req.body;
+
+    if (type && type !== category.type && (
+      await Transaction.exists({ category: categoryId, type: { $ne: type } }) ||
+      await Budget.exists({ 'categoryLimits.category': categoryId })
+    )) {
+      return res.status(400).json({ success: false, message: 'Category type cannot change while it has transactions of another type' });
+    }
     
     if (name) category.name = name;
     if (type) category.type = type;
@@ -110,11 +116,10 @@ const deleteCategory = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
-    // 7-POINT PLAN FIX: Removed the lock on system categories.
-    if (category.user !== null && category.user.toString() !== userId.toString()) {
+    if (!category.user || category.user.toString() !== userId.toString()) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(401).json({ success: false, message: 'Not authorized to delete this category' });
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this category' });
     }
 
     let uncategorized = await Category.findOne({ 
@@ -133,7 +138,13 @@ const deleteCategory = async (req, res, next) => {
 
     await Transaction.updateMany(
       { category: categoryId, user: userId },
-      { $set: { category: uncategorized._id } },
+      { $set: { category: uncategorized._id, subCategory: null } },
+      { session }
+    );
+
+    await Budget.updateMany(
+      { user: userId },
+      { $pull: { categoryLimits: { category: categoryId } } },
       { session }
     );
 

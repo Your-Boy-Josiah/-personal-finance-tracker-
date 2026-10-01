@@ -95,7 +95,7 @@ const getTransactions = async (req, res) => {
 // @access  Private
 const addTransaction = async (req, res) => {
   try {
-    const { type, amount, category, description, transactionDate } = req.body;
+    const { type, amount, category, subCategory, description, transactionDate } = req.body;
 
     // 1. Validation check
     if (!type || !amount || !category) {
@@ -105,6 +105,7 @@ const addTransaction = async (req, res) => {
     // FIXED: Crucial Security Check - Ensure category belongs to user or is global
     const categoryExists = await Category.findOne({ 
       _id: category, 
+      type,
       $or: [{ user: req.user._id }, { user: null }] 
     });
 
@@ -118,6 +119,7 @@ const addTransaction = async (req, res) => {
       type,
       amount,
       category,
+      subCategory: subCategory || null,
       description,
       transactionDate: transactionDate || Date.now(),
     });
@@ -145,21 +147,34 @@ const updateTransaction = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized to update this transaction' });
     }
 
-    // FIXED: Security Check - If they are changing the category, verify they own the new one
-    if (req.body.category) {
-      const categoryExists = await Category.findOne({ 
-        _id: req.body.category, 
+    const nextCategoryId = req.body.category || transaction.category;
+    const nextType = req.body.type || transaction.type;
+    const updates = { ...req.body };
+
+    if (req.body.category && req.body.subCategory === undefined) {
+      updates.subCategory = null;
+    }
+
+    if (req.body.subCategory && !nextCategoryId) {
+      return res.status(400).json({ message: 'A category is required for a sub-category' });
+    }
+
+    if (nextCategoryId && (req.body.category || req.body.type || req.body.subCategory !== undefined)) {
+      const categoryExists = await Category.findOne({
+        _id: nextCategoryId,
+        type: nextType,
         $or: [{ user: req.user._id }, { user: null }] 
       });
       if (!categoryExists) {
         return res.status(403).json({ message: 'Invalid or unauthorized category selection' });
       }
+
     }
 
     // 3. Update the document in MongoDB
     const updatedTransaction = await Transaction.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updates,
       { new: true, runValidators: true }
     );
 

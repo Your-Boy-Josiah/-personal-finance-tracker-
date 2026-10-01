@@ -76,7 +76,7 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [bankSyncError, setBankSyncError] = useState("");
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
-  const [quickForm, setQuickForm] = useState({ amount: "", category: "", description: "" });
+  const [quickForm, setQuickForm] = useState({ amount: "", category: "", subCategory: "", description: "" });
 
   const fetchDashboardData = async (categoryMonth = selectedDashboardMonth) => {
     try {
@@ -127,11 +127,12 @@ export default function Dashboard() {
         type: quickAction,
         amount: Number(quickForm.amount),
         category: quickForm.category,
+        subCategory: quickForm.subCategory || null,
         description: quickForm.description || (quickAction === 'income' ? 'Quick Deposit' : 'Quick Transfer'),
         transactionDate: getToday() || localDateString
       });
       setQuickAction(null);
-      setQuickForm({ amount: "", category: "", description: "" });
+      setQuickForm({ amount: "", category: "", subCategory: "", description: "" });
       await fetchDashboardData();
     } catch (err) { alert(err.response?.data?.message || "Failed to add transaction"); } 
     finally { setIsSubmittingQuick(false); }
@@ -203,6 +204,11 @@ export default function Dashboard() {
   };
 
   const filteredCategories = categories.filter(c => c.type === quickAction);
+  const selectedQuickCategory = filteredCategories.find(c => c._id === quickForm.category);
+  const openQuickAction = (action) => {
+    setQuickForm({ amount: "", category: "", subCategory: "", description: "" });
+    setQuickAction(action);
+  };
   const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const avatarUrl = getAvatarUrl(user?.avatar);
   const hour = new Date().getHours();
@@ -341,11 +347,20 @@ export default function Dashboard() {
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Category</label>
-                <select required value={quickForm.category} onChange={e => setQuickForm({...quickForm, category: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900">
+                <select required value={quickForm.category} onChange={e => setQuickForm({...quickForm, category: e.target.value, subCategory: ""})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900">
                   <option value="" disabled>Select category</option>
                   {filteredCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
+              {selectedQuickCategory && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Sub-category</label>
+                  <input type="text" list="quick-subcategory-options" maxLength={100} value={quickForm.subCategory} onChange={e => setQuickForm({...quickForm, subCategory: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900" placeholder="Optional; choose or enter a sub-category" />
+                  <datalist id="quick-subcategory-options">
+                    {(selectedQuickCategory.subCategories || []).map((subCategory) => <option key={subCategory} value={subCategory} />)}
+                  </datalist>
+                </div>
+              )}
               <div>
                 <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Description <span className="text-neutral-500 font-normal">(Optional)</span></label>
                 <input type="text" value={quickForm.description} onChange={e => setQuickForm({...quickForm, description: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900" placeholder="What was this for?"/>
@@ -354,9 +369,6 @@ export default function Dashboard() {
                 {isSubmittingQuick ? "Saving..." : "Log Transaction"}
               </button>
             </form>
-            <div className="mt-5 pt-4 text-center border-t border-slate-100 dark:border-neutral-800">
-              <Link to="/app/transactions" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Need sub-categories? Switch to full page →</Link>
-            </div>
           </div>
         </div>
       )}
@@ -480,8 +492,8 @@ export default function Dashboard() {
             <h3 className={`text-3xl font-bold mt-1 ${isBlurred ? 'filter blur-md select-none' : ''}`}>{blurText(formatCurrency(availableBalance))}</h3>
             
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setQuickAction('income')} className="flex-1 bg-white dark:bg-neutral-800 text-[#1e1b4b] dark:text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors"><Plus size={14} /> Add money</button>
-              <button onClick={() => setQuickAction('expense')} className="flex-1 bg-indigo-800 dark:bg-white dark:text-black text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-700 dark:hover:bg-neutral-200 border border-indigo-700 dark:border-white transition-colors"><ArrowRight size={14} /> Transfer</button>
+              <button onClick={() => openQuickAction('income')} className="flex-1 bg-white dark:bg-neutral-800 text-[#1e1b4b] dark:text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors"><Plus size={14} /> Add money</button>
+              <button onClick={() => openQuickAction('expense')} className="flex-1 bg-indigo-800 dark:bg-white dark:text-black text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-700 dark:hover:bg-neutral-200 border border-indigo-700 dark:border-white transition-colors"><ArrowRight size={14} /> Transfer</button>
             </div>
           </div>
 

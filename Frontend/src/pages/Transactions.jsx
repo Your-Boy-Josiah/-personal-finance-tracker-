@@ -266,7 +266,7 @@ const Transactions = () => {
   // Dynamic filter to ensure Income transactions only show Income categories, etc.
   const filteredCategories = categories.filter(c => c.type === form.type);
   const activeCategoryObj = filteredCategories.find(c => c._id === form.category);
-  const hasSubCategories = activeCategoryObj && activeCategoryObj.subCategories && activeCategoryObj.subCategories.length > 0;
+  const hasSubCategories = Boolean(activeCategoryObj);
 
   // ==============================================================
   // RENDER UI
@@ -480,20 +480,24 @@ const Transactions = () => {
                   </select>
                 </div>
 
-                {hasSubCategories && (
+                {activeCategoryObj && (
                   <div>
                     <label htmlFor="transaction-subcategory" className="mb-1.5 block text-sm font-medium">Sub-category</label>
-                    <select
+                    <input
                       id="transaction-subcategory"
+                      type="text"
+                      list="transaction-subcategory-options"
+                      maxLength={100}
                       value={form.subCategory}
                       onChange={(event) => setForm({ ...form, subCategory: event.target.value })}
+                      placeholder="Optional; choose or enter a sub-category"
                       className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                    >
-                      <option value="">None</option>
-                      {activeCategoryObj.subCategories.map((sub, idx) => (
-                        <option key={idx} value={sub}>{sub}</option>
+                    />
+                    <datalist id="transaction-subcategory-options">
+                      {(activeCategoryObj.subCategories || []).map((sub, idx) => (
+                        <option key={idx} value={sub} />
                       ))}
-                    </select>
+                    </datalist>
                   </div>
                 )}
 

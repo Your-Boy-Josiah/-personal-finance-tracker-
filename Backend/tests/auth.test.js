@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const request = require('supertest');
 const app = require('../app');
+const Category = require('../models/Category');
 
 // Allow up to 10 minutes for the MongoDB binary to download on the first run
 jest.setTimeout(600000);
@@ -106,12 +107,89 @@ describe('End-to-End Security & Cascade Audit', () => {
       .send({
         name: 'Dining',
         type: 'expense',
-        color: '#FF5733'
+        color: '#FF5733',
+        subCategories: ['Groceries']
       });
 
     expect(res.statusCode).toBe(201);
     expect(res.body.success).toBe(true);
     testCategoryId = res.body.data._id;
+  });
+
+  it('should persist typed subcategories and reject mismatched transaction types', async () => {
+    const validTransaction = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ type: 'expense', amount: 25, category: testCategoryId, subCategory: 'Travel' });
+
+    expect(validTransaction.statusCode).toBe(201);
+    expect(validTransaction.body.subCategory).toBe('Travel');
+
+    const mismatchedType = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ type: 'income', amount: 25, category: testCategoryId });
+
+    expect(mismatchedType.statusCode).toBe(403);
+
+    const typeChange = await request(app)
+      .put(`/api/categories/${testCategoryId}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ type: 'income' });
+
+    expect(typeChange.statusCode).toBe(400);
+  });
+
+  it('should prevent access to another user or shared category mutations', async () => {
+    const otherUser = await request(app)
+      .post('/api/auth/register')
+      .send({
+        firstName: 'Other',
+        lastName: 'User',
+        email: 'other@example.com',
+        password: 'Password123!'
+      });
+    expect(otherUser.statusCode).toBe(201);
+
+    const otherCategory = await request(app)
+      .post('/api/categories')
+      .set('Authorization', `Bearer ${otherUser.body.token}`)
+      .send({ name: 'Private food', type: 'expense', color: '#22aa44' });
+    expect(otherCategory.statusCode).toBe(201);
+
+    const ownCategories = await request(app)
+      .get('/api/categories')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(ownCategories.body.data.map(category => category._id)).not.toContain(otherCategory.body.data._id);
+
+    const foreignTransaction = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ type: 'expense', amount: 10, category: otherCategory.body.data._id });
+    expect(foreignTransaction.statusCode).toBe(403);
+
+    const foreignBudgetCategory = await request(app)
+      .put('/api/budget')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({
+        monthlyIncome: 1000,
+        incomeFrequency: 'monthly',
+        currency: 'NGN',
+        categoryLimits: [{ category: otherCategory.body.data._id, spendingCap: 100 }]
+      });
+    expect(foreignBudgetCategory.statusCode).toBe(400);
+
+    const sharedCategory = await Category.create({ name: 'Shared', type: 'expense', user: null });
+    const updateSharedCategory = await request(app)
+      .put(`/api/categories/${sharedCategory._id}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: 'Changed shared' });
+    expect(updateSharedCategory.statusCode).toBe(403);
+
+    const deleteSharedCategory = await request(app)
+      .delete(`/api/categories/${sharedCategory._id}`)
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(deleteSharedCategory.statusCode).toBe(403);
   });
 
   it('should allow a color-only category update', async () => {
@@ -132,6 +210,6 @@ describe('End-to-End Security & Cascade Audit', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.message).toMatch(/safely reassigned/);
+    expect(res.body.message).toMatch(/transactions reassigned/);
   });
 });
