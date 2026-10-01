@@ -52,9 +52,6 @@ const getDashboardSummary = async (req, res) => {
     // Fetch User's Total Budget Limit
     const userBudgets = await Budget.find({ user: userId });
     const totalBudgetLimit = userBudgets.reduce((sum, budget) => {
-      if (budget.amount != null || budget.limit != null) {
-        return sum + Number(budget.amount ?? budget.limit ?? 0);
-      }
       const categoryLimits = budget.categoryLimits;
       const categoryTotal = Array.isArray(categoryLimits)
         ? categoryLimits.reduce(
@@ -144,13 +141,14 @@ const getDashboardSummary = async (req, res) => {
     }));
 
     // Daily Trend Data (Last 30 Days) for Pop-Up Modals
-    const thirtyDaysAgo = new Date();
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const dailyDataRaw = await Transaction.aggregate([
       { $match: { 
           user: userId,
-          transactionDate: { $gte: thirtyDaysAgo } 
+          transactionDate: { $gte: thirtyDaysAgo, $lte: now }
         } 
       },
       { $group: {
@@ -167,7 +165,12 @@ const getDashboardSummary = async (req, res) => {
     ]);
 
     const dailyData = dailyDataRaw.map(data => ({
-      date: `${monthNames[data._id.month - 1]} ${data._id.day}`,
+      date: new Date(Date.UTC(data._id.year, data._id.month - 1, data._id.day)).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC'
+      }),
       income: data.income,
       expenses: data.expenses,
       profit: data.income - data.expenses

@@ -15,6 +15,7 @@ const { protect } = require('../middleware/authMiddleware');
 const validate = require('../utils/validate');
 // Import Joi validation schema for category validation
 const categorySchema = require('../validations/categorySchema');
+const updateCategorySchema = require('../validations/updateCategorySchema');
 
 // ==============================================================
 // PRIVATE ROUTES
@@ -31,7 +32,7 @@ router.route('/')
 
 // Mount the single ID route for deletion
 router.route('/:id')
-  .put(protect, validate(categorySchema), updateCategory)
+  .put(protect, validate(updateCategorySchema), updateCategory)
   .delete(protect, deleteCategory);
 
 // ============================================================

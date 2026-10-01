@@ -6,6 +6,7 @@
 
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 
@@ -37,9 +38,11 @@ const {
 // MULTER CONFIGURATION (IMAGE UPLOADS)
 // ==============================================================
 
+const avatarDirectory = path.join(__dirname, '..', 'uploads', 'avatars');
+
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, 'uploads/avatars/'); // Files will be saved here locally
+    fs.mkdir(avatarDirectory, { recursive: true }, (error) => cb(error, avatarDirectory));
   },
   filename(req, file, cb) {
     // Creates a unique filename: e.g., avatar-163456789.jpg

@@ -6,20 +6,28 @@
 // ===============================================================
 
 const crypto = require('crypto');
+const fs = require('fs/promises');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const path = require('path');
 const User = require('../models/User');
+const avatarDirectory = path.join(__dirname, '..', 'uploads', 'avatars');
 
 // ==============================================================
 // HELPER FUNCTIONS
 // ==============================================================
 
-// Generates a secure JSON Web Token valid for 45 minutes
+// Generates a secure JSON Web Token using the configured expiry.
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '45m',
+    expiresIn: process.env.JWT_EXPIRE || '45m',
   });
 };
+
+const createAuthResponse = (user) => ({
+  ...user.toJSON(),
+  token: generateToken(user._id),
+});
 
 // Hashes a raw reset token with SHA-256 before it touches the database,
 // so a leaked database never exposes a usable reset token
@@ -63,17 +71,7 @@ const registerUser = async (req, res) => {
 
     // 5. Send success response with token and new preference fields
     if (user) {
-      res.status(201).json({
-        _id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: user.fullName, // Accessing the virtual property
-        email: user.email,
-        role: user.role,                 // UPDATED: Include role
-        baseCurrency: user.baseCurrency, // UPDATED: Include currency
-        monthlyIncome: user.monthlyIncome,
-        token: generateToken(user._id),
-      });
+      res.status(201).json(createAuthResponse(user));
     } else {
       res.status(400).json({ message: 'Invalid user data' });
     }
@@ -99,17 +97,7 @@ const loginUser = async (req, res) => {
 
     // 3. Compare incoming plain text password to the hashed database password
     if (user && (await bcrypt.compare(password, user.password))) {
-      res.status(200).json({
-        _id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,                 // UPDATED: Include role
-        baseCurrency: user.baseCurrency, // UPDATED: Include currency
-        monthlyIncome: user.monthlyIncome,
-        token: generateToken(user._id),
-      });
+      res.status(200).json(createAuthResponse(user));
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -207,7 +195,7 @@ const getMe = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const allowedFields = ['firstName', 'lastName', 'email', 'baseCurrency', 'monthlyIncome'];
+    const allowedFields = ['firstName', 'lastName', 'email', 'baseCurrency', 'monthlyIncome', 'notificationPreferences'];
     const updates = Object.fromEntries(
       Object.entries(req.body).filter(([field]) => allowedFields.includes(field))
     );
@@ -264,6 +252,7 @@ const uploadAvatar = async (req, res) => {
 
     // Create the public URL path for the image
     const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    const previousAvatar = req.user.avatar;
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
@@ -271,8 +260,13 @@ const uploadAvatar = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password');
 
+    if (previousAvatar?.startsWith('/uploads/avatars/')) {
+      await fs.unlink(path.join(avatarDirectory, path.basename(previousAvatar))).catch(() => {});
+    }
+
     res.status(200).json({ success: true, data: updatedUser, message: 'Avatar updated successfully' });
   } catch (error) {
+    if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
     res.status(500).json({ success: false, message: 'Error uploading avatar', error: error.message });
   }
 };

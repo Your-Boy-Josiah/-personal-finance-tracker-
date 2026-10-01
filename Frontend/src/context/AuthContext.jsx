@@ -4,7 +4,7 @@
 //  enhanced error surfacing from the backend.
 // ===============================================================
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "../services/api";
 
 const AuthContext = createContext(null);
@@ -49,8 +49,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
-      // BUG FIX: login endpoint returns data directly, not inside a 'data' object
-      setUser(res.data); 
+      const { token, ...userData } = res.data;
+      setUser(userData);
       return { success: true };
     } catch (err) {
       setError(extractErrors(err));
@@ -66,8 +66,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post("/auth/register", userData);
       localStorage.setItem("token", res.data.token);
-      // BUG FIX: register endpoint returns data directly
-      setUser(res.data); 
+      const { token, ...authenticatedUser } = res.data;
+      setUser(authenticatedUser);
       return { success: true };
     } catch (err) {
       setError(extractErrors(err));
@@ -102,13 +102,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = useCallback((updates) => {
+    setUser((currentUser) => currentUser ? { ...currentUser, ...updates } : currentUser);
+  }, []);
+
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, updateProfile, changePassword, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, updateProfile, updateUser, changePassword, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

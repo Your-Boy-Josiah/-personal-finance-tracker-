@@ -16,16 +16,11 @@ import {
   X,
 } from "lucide-react";
 import api from "../services/api";
+import { formatDateOnly, getToday, toDateInputValue } from "../utils/dates";
 
 // ==============================================================
 // HELPER FUNCTIONS
 // ==============================================================
-
-const getToday = () => {
-  const today = new Date();
-  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-  return today.toISOString().slice(0, 10);
-};
 
 const emptyForm = () => ({
   type: "expense",
@@ -46,22 +41,15 @@ const transactionToForm = (transaction) => ({
   subCategory: transaction.subCategory || "",
   description: transaction.description || "",
   transactionDate: transaction.transactionDate
-    ? new Date(transaction.transactionDate).toISOString().slice(0, 10)
+    ? toDateInputValue(transaction.transactionDate)
     : getToday(),
 });
 
-const formatDate = (value) => {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-};
+const formatDate = (value) => formatDateOnly(value, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
 const formatAmount = (amount) => {
   return `₦${Number(amount || 0).toLocaleString(undefined, {

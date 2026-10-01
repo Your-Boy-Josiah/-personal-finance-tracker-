@@ -8,13 +8,15 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext"; // ADDED
+import { getAvatarUrl } from "../utils/avatar";
+import { formatDateOnly, getToday } from "../utils/dates";
 import { 
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid 
 } from "recharts";
 import { 
   Plus, ArrowRight, TrendingUp, AlertCircle, X, 
-  RefreshCw, Landmark, CheckCircle2, Eye, EyeOff, Calendar
+  RefreshCw, Landmark, Eye, EyeOff, Calendar
 } from "lucide-react";
 
 const COLORS = ['#8b5cf6', '#10b981', '#f59e0b', '#3b82f6', '#f43f5e', '#06b6d4', '#d946ef'];
@@ -49,13 +51,6 @@ const MemoizedPieChart = React.memo(({ data, isEmpty, onPieClick }) => (
   </ResponsiveContainer>
 ));
 
-// Helper for dynamic image pathing
-const getAvatarUrl = (path) => {
-  if (!path) return null;
-  if (path.startsWith('http') || path.startsWith('blob')) return path;
-  return `http://localhost:5000${path}`;
-};
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth(); // ADDED
@@ -65,9 +60,6 @@ export default function Dashboard() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Synced Connected Banks State
-  const [connectedBanks, setConnectedBanks] = useState([]);
 
   // UI Interactive States
   const [activeModal, setActiveModal] = useState(null); 
@@ -82,6 +74,7 @@ export default function Dashboard() {
   // Quick Action & Sync States
   const [quickAction, setQuickAction] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [bankSyncError, setBankSyncError] = useState("");
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
   const [quickForm, setQuickForm] = useState({ amount: "", category: "", description: "" });
 
@@ -96,10 +89,6 @@ export default function Dashboard() {
       setSummary(dashRes.data.data || dashRes.data);
       setCategories(catRes.data.data || []);
       
-      // Load synced banks
-      const savedBanks = localStorage.getItem("user_connected_banks");
-      if (savedBanks) setConnectedBanks(JSON.parse(savedBanks));
-      
     } catch (err) {
       setError("Failed to load dashboard data.");
     } finally {
@@ -110,11 +99,19 @@ export default function Dashboard() {
   useEffect(() => { fetchDashboardData(); }, []);
 
   const handleBankSync = async () => {
+    setBankSyncError("");
+    if (!user?.bankConnected) {
+      setBankSyncError("Connect a bank account before syncing transactions.");
+      return;
+    }
+
     setIsSyncing(true);
     try {
       await api.post('/transactions/sync'); 
       await fetchDashboardData(); 
-    } catch (err) { console.error("Sync failed", err); } 
+    } catch (err) {
+      setBankSyncError(err.response?.data?.message || "Bank sync failed. Please try again.");
+    }
     finally { setIsSyncing(false); }
   };
 
@@ -127,7 +124,7 @@ export default function Dashboard() {
         amount: Number(quickForm.amount),
         category: quickForm.category,
         description: quickForm.description || (quickAction === 'income' ? 'Quick Deposit' : 'Quick Transfer'),
-        transactionDate: new Date().toISOString().slice(0, 10)
+        transactionDate: getToday()
       });
       setQuickAction(null);
       setQuickForm({ amount: "", category: "", description: "" });
@@ -189,9 +186,9 @@ export default function Dashboard() {
   const blurText = (text) => isBlurred ? "••••••" : text;
 
   const modalConfig = {
-    revenue: { title: "Revenue Trend (Last 30 Days)", key: "income", color: "#8b5cf6" },
-    expenses: { title: "Expense Trend (Last 30 Days)", key: "expenses", color: "#f43f5e" },
-    profit: { title: "Net Profit Trend (Last 30 Days)", key: "profit", color: "#10b981" }
+    revenue: { title: "Revenue Trend", key: "income", color: "#8b5cf6" },
+    expenses: { title: "Expense Trend", key: "expenses", color: "#f43f5e" },
+    profit: { title: "Net Profit Trend", key: "profit", color: "#10b981" }
   };
 
   const filteredCategories = categories.filter(c => c.type === quickAction);
@@ -212,12 +209,19 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setActiveModal(null)}>
           <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold dark:text-white">{modalConfig[activeModal].title}</h2>
+              <div>
+                <h2 className="text-xl font-bold dark:text-white">{modalConfig[activeModal].title}</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">
+                  {dailyData.length > 0
+                    ? `${dailyData[0].date} – ${dailyData[dailyData.length - 1].date}`
+                    : "No transactions available in the last 30 days"}
+                </p>
+              </div>
               <button onClick={() => setActiveModal(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
             </div>
             <div className="h-[400px] w-full">
               {dailyData.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-500">No transaction data available for the last 30 days.</div>
+                <div className="flex h-full items-center justify-center text-sm text-slate-500">No transactions available in the last 30 days.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -444,7 +448,7 @@ export default function Dashboard() {
                         {tx.description || tx.merchant || 'Transaction'}
                         {tx.subCategory && <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[10px] uppercase text-slate-600 dark:bg-neutral-800 dark:text-neutral-400">{tx.subCategory}</span>}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-neutral-500">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500 dark:text-neutral-500">{formatDateOnly(tx.transactionDate || tx.createdAt)}</p>
                     </div>
                   </div>
                   <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-900 dark:text-white'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>
@@ -476,32 +480,21 @@ export default function Dashboard() {
               <h3 className="text-sm font-bold dark:text-white flex items-center gap-2">
                 <Landmark size={16} className="text-indigo-500"/> Connected Banks
               </h3>
-              <button onClick={handleBankSync} disabled={isSyncing} className="flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+              <button onClick={handleBankSync} disabled={isSyncing || !user?.bankConnected} className="flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors disabled:cursor-not-allowed disabled:opacity-50">
                 <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
                 {isSyncing ? "Syncing" : "Sync"}
               </button>
             </div>
             
             <div className="space-y-3">
-              {connectedBanks.length === 0 ? (
-                <div className="text-center py-4 text-xs text-slate-500 dark:text-neutral-400 border border-dashed border-slate-300 dark:border-neutral-700 rounded-lg">
-                  No banks linked. Visit Settings.
+              <div className="flex items-center gap-3 rounded-md border border-slate-100 p-3 dark:border-neutral-800">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"><Landmark size={14} /></div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.bankConnected ? "Bank account connected" : "No bank connected"}</p>
+                  {!user?.bankConnected && <Link to="/app/account" className="text-[10px] text-indigo-600 hover:underline dark:text-indigo-400">Connect in Account Settings</Link>}
                 </div>
-              ) : (
-                connectedBanks.map(bank => (
-                  <div key={bank.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-neutral-800 rounded-lg bg-slate-50 dark:bg-neutral-900/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 flex items-center justify-center"><Landmark size={14} /></div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                          {bank.name} <CheckCircle2 size={12} className="text-emerald-500" />
-                        </p>
-                        <p className="text-[10px] text-slate-500 dark:text-neutral-500">{bank.type} • Active</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+              </div>
+              {bankSyncError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{bankSyncError}</p>}
             </div>
           </div>
 

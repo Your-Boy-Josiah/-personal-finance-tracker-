@@ -8,6 +8,7 @@ const cron = require('node-cron');
 const Budget = require('../models/Budget');
 const Transaction = require('../models/Transaction');
 const Alert = require('../models/Alert');
+const User = require('../models/User');
 const logger = require('./logger');
 
 // ==============================================================
@@ -50,6 +51,8 @@ const detectSpendingBreaches = async () => {
 
   for (const budget of budgets) {
     if (!budget.categoryLimits || budget.categoryLimits.length === 0) continue;
+    const user = await User.findById(budget.user).select('notificationPreferences');
+    if (!user || user.notificationPreferences?.budgetBreachWarnings === false) continue;
 
     for (const limit of budget.categoryLimits) {
       // Use MongoDB Aggregation to calculate total spent in this category this month
