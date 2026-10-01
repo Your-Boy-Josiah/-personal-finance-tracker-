@@ -24,7 +24,7 @@ const registerSchema = Joi.object({
   password: Joi.string().min(8).required().pattern(passwordRegex).messages({
     'string.pattern.base': 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&)'
   }),
-  baseCurrency: Joi.string().length(3).optional(), // e.g., 'NGN', 'USD'
+  baseCurrency: Joi.string().valid('NGN', 'USD', 'EUR', 'GBP').optional(),
   monthlyIncome: Joi.number().min(0).optional()
 });
 

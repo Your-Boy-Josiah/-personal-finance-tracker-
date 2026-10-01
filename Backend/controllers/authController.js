@@ -44,7 +44,7 @@ const hashToken = (rawToken) => {
 // @access  Public
 const registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, baseCurrency, monthlyIncome } = req.body;
 
     // 1. Validation check
     if (!firstName || !lastName || !email || !password) {
@@ -67,6 +67,8 @@ const registerUser = async (req, res) => {
       lastName,
       email,
       password: hashedPassword,
+      baseCurrency,
+      monthlyIncome,
     });
 
     // 5. Send success response with token and new preference fields
@@ -80,6 +82,8 @@ const registerUser = async (req, res) => {
         role: user.role,                 // UPDATED: Include role
         baseCurrency: user.baseCurrency, // UPDATED: Include currency
         monthlyIncome: user.monthlyIncome,
+        notificationPreferences: user.notificationPreferences,
+        bankConnected: user.bankConnected,
         avatar: user.avatar,             // UPDATED: Include avatar on register
         token: generateToken(user._id),
       });
@@ -117,6 +121,8 @@ const loginUser = async (req, res) => {
         role: user.role,                 
         baseCurrency: user.baseCurrency, 
         monthlyIncome: user.monthlyIncome,
+        notificationPreferences: user.notificationPreferences,
+        bankConnected: user.bankConnected,
         avatar: user.avatar,            
         token: generateToken(user._id),
       });

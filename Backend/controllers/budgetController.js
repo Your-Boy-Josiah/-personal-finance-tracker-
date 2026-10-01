@@ -7,6 +7,7 @@
 // ===============================================================
 
 const Budget = require('../models/Budget');
+const Category = require('../models/Category');
 
 // ============================================================== 
 // @desc    Get the current budget for the logged-in user
@@ -15,10 +16,15 @@ const Budget = require('../models/Budget');
 // ============================================================== 
 const getBudget = async (req, res) => {
   try {
-    const budget = await Budget.findOne({ user: req.user._id }).populate(
-      'categoryLimits.category',
-      'name type color'
-    );
+    const budget = await Budget.findOne({ user: req.user._id }).populate({
+      path: 'categoryLimits.category',
+      select: 'name type color',
+      match: { $or: [{ user: req.user._id }, { user: null }], type: 'expense' },
+    });
+
+    if (budget) {
+      budget.categoryLimits = budget.categoryLimits.filter((limit) => limit.category);
+    }
 
     res.status(200).json(budget || { user: req.user._id, categoryLimits: [] });
   } catch (error) {
@@ -59,6 +65,24 @@ const updateBudget = async (req, res) => {
 
       if (new Set(limitKeys).size !== limitKeys.length) {
         return res.status(400).json({ message: 'Each category/sub-category combination may only have one spending cap' });
+      }
+
+      const categoryIds = [...new Set(categoryLimits.map((limit) => String(limit.category)))];
+      const categories = await Category.find({
+        _id: { $in: categoryIds },
+        type: 'expense',
+        $or: [{ user: req.user._id }, { user: null }],
+      }).select('_id subCategories');
+      const categoriesById = new Map(categories.map((category) => [String(category._id), category]));
+
+      for (const limit of categoryLimits) {
+        const category = categoriesById.get(String(limit.category));
+        if (!category) {
+          return res.status(400).json({ message: 'Invalid budget category selection' });
+        }
+        if (limit.subCategory && !category.subCategories.includes(limit.subCategory.trim())) {
+          return res.status(400).json({ message: 'Sub-category is not valid for the selected category' });
+        }
       }
     }
 

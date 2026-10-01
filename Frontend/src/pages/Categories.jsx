@@ -197,11 +197,11 @@ const Categories = () => {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm("WARNING: Are you sure you want to delete ALL categories? Transactions will be reassigned. This cannot be undone.")) return;
+    if (!window.confirm("WARNING: Delete all your custom categories? Transactions will be reassigned. This cannot be undone.")) return;
     
     try {
       setIsDeletingAll(true);
-      const deletePromises = categories.map(cat => api.delete(`/categories/${cat._id}`));
+      const deletePromises = ownedCategories.map(cat => api.delete(`/categories/${cat._id}`));
       await Promise.all(deletePromises);
       await fetchCategories();
     } catch (err) {
@@ -223,6 +223,7 @@ const Categories = () => {
 
   const incomeCategories = categories.filter(c => c.type === "income");
   const expenseCategories = categories.filter(c => c.type === "expense");
+  const ownedCategories = categories.filter(category => category.user);
 
   // Dynamic filter for transactions inside the View Modal
   const displayedTransactions = activeSubFilter
@@ -263,7 +264,7 @@ const Categories = () => {
           <button
             type="button"
             onClick={handleDeleteAll}
-            disabled={isDeletingAll || categories.length === 0}
+            disabled={isDeletingAll || ownedCategories.length === 0}
             className="inline-flex items-center gap-2 rounded-md border border-rose-200 bg-transparent px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/30 dark:text-rose-400 dark:hover:bg-rose-500/10"
           >
             {isDeletingAll ? "Deleting..." : "Delete All"}
@@ -318,7 +319,7 @@ const Categories = () => {
                       <span className="font-semibold text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">{cat.name}</span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    {cat.user && <div className="flex items-center gap-2">
                       <button 
                         type="button"
                         onClick={(e) => openEditModal(e, cat)} 
@@ -335,7 +336,7 @@ const Categories = () => {
                       >
                         <Trash2 size={14} />
                       </button>
-                    </div>
+                    </div>}
                   </div>
                   
                   <div className="mt-4 border-t border-slate-100 pt-3 dark:border-neutral-800/60">
@@ -349,7 +350,7 @@ const Categories = () => {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-xs font-medium text-slate-400 dark:text-neutral-600">No sub-categories created. Click Edit to add some.</span>
+                      <span className="text-xs font-medium text-slate-400 dark:text-neutral-600">{cat.user ? "No sub-categories created. Click Edit to add some." : "No sub-categories created."}</span>
                     )}
                   </div>
                 </div>
@@ -388,7 +389,7 @@ const Categories = () => {
                       <span className="font-semibold text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">{cat.name}</span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    {cat.user && <div className="flex items-center gap-2">
                       <button 
                         type="button"
                         onClick={(e) => openEditModal(e, cat)} 
@@ -405,7 +406,7 @@ const Categories = () => {
                       >
                         <Trash2 size={14} />
                       </button>
-                    </div>
+                    </div>}
                   </div>
                   
                   <div className="mt-4 border-t border-slate-100 pt-3 dark:border-neutral-800/60">
@@ -419,7 +420,7 @@ const Categories = () => {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-xs font-medium text-slate-400 dark:text-neutral-600">No sub-categories created. Click Edit to add some.</span>
+                      <span className="text-xs font-medium text-slate-400 dark:text-neutral-600">{cat.user ? "No sub-categories created. Click Edit to add some." : "No sub-categories created."}</span>
                     )}
                   </div>
                 </div>
@@ -517,14 +518,14 @@ const Categories = () => {
               </div>
             </div>
             
-            <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-4 dark:border-neutral-800 dark:bg-neutral-900/50">
+            {viewingCategory.user && <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-4 dark:border-neutral-800 dark:bg-neutral-900/50">
               <button 
                 onClick={(e) => { setViewingCategory(null); openEditModal(e, viewingCategory); }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200"
               >
                 <Pencil size={16} /> Edit this Category
               </button>
-            </div>
+            </div>}
           </section>
         </div>
       )}

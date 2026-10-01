@@ -76,7 +76,7 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [bankSyncError, setBankSyncError] = useState("");
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
-  const [quickForm, setQuickForm] = useState({ amount: "", category: "", description: "" });
+  const [quickForm, setQuickForm] = useState({ amount: "", category: "", subCategory: "", description: "" });
 
   const fetchDashboardData = async (categoryMonth = selectedDashboardMonth) => {
     try {
@@ -127,11 +127,12 @@ export default function Dashboard() {
         type: quickAction,
         amount: Number(quickForm.amount),
         category: quickForm.category,
+        subCategory: quickForm.subCategory || null,
         description: quickForm.description || (quickAction === 'income' ? 'Quick Deposit' : 'Quick Transfer'),
         transactionDate: getToday() || localDateString
       });
       setQuickAction(null);
-      setQuickForm({ amount: "", category: "", description: "" });
+      setQuickForm({ amount: "", category: "", subCategory: "", description: "" });
       await fetchDashboardData();
     } catch (err) { alert(err.response?.data?.message || "Failed to add transaction"); } 
     finally { setIsSubmittingQuick(false); }
@@ -188,6 +189,13 @@ export default function Dashboard() {
   };
 
   const blurText = (text) => isBlurred ? "••••••" : text;
+  const formatCurrency = (amount) => new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: user?.baseCurrency || "NGN",
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 
   const modalConfig = {
     revenue: { title: "Revenue Trend", key: "income", color: "#8b5cf6" },
@@ -196,6 +204,11 @@ export default function Dashboard() {
   };
 
   const filteredCategories = categories.filter(c => c.type === quickAction);
+  const selectedQuickCategory = filteredCategories.find(c => c._id === quickForm.category);
+  const openQuickAction = (action) => {
+    setQuickForm({ amount: "", category: "", subCategory: "", description: "" });
+    setQuickAction(action);
+  };
   const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const avatarUrl = getAvatarUrl(user?.avatar);
   const hour = new Date().getHours();
@@ -238,7 +251,7 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.2} />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#737373' }} minTickGap={30} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#737373' }} tickFormatter={formatYAxis} width={60} />
-                    <RechartsTooltip contentStyle={{ borderRadius: '8px', fontSize: '13px', border: 'none', backgroundColor: '#171717', color: '#fff' }} formatter={(value) => [`₦${value.toLocaleString()}`, modalConfig[activeModal].key.charAt(0).toUpperCase() + modalConfig[activeModal].key.slice(1)]}/>
+                    <RechartsTooltip contentStyle={{ borderRadius: '8px', fontSize: '13px', border: 'none', backgroundColor: '#171717', color: '#fff' }} formatter={(value) => [formatCurrency(value), modalConfig[activeModal].key.charAt(0).toUpperCase() + modalConfig[activeModal].key.slice(1)]}/>
                     <Area type="monotone" dataKey={modalConfig[activeModal].key} stroke={modalConfig[activeModal].color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${activeModal})`} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -260,14 +273,14 @@ export default function Dashboard() {
               <button onClick={() => setPieModalData(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
             </div>
             
-            <p className="text-2xl font-bold mb-6 dark:text-white">Total: ₦{pieModalData.value.toLocaleString()}</p>
+            <p className="text-2xl font-bold mb-6 dark:text-white">Total: {formatCurrency(pieModalData.value)}</p>
             
             <div className="space-y-3 max-h-75 overflow-y-auto pr-2">
               {pieModalData.subCategories.map((sub, idx) => (
                 <div key={idx} className="flex justify-between items-center p-3 rounded-lg border border-slate-100 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900/50">
                   <span className="text-sm font-medium dark:text-neutral-300">{sub.name}</span>
                   <div className="flex flex-col items-end">
-                    <span className="text-sm font-bold dark:text-white">₦{sub.value.toLocaleString()}</span>
+                    <span className="text-sm font-bold dark:text-white">{formatCurrency(sub.value)}</span>
                     <span className="text-[10px] text-slate-500">{Math.round((sub.value / pieModalData.value) * 100)}% of {pieModalData.name}</span>
                   </div>
                 </div>
@@ -302,10 +315,10 @@ export default function Dashboard() {
                     </span>
                     {monthData ? (
                       <span className="block space-y-2 text-xs">
-                        <span className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">In:</span> <span className="font-medium text-emerald-600 dark:text-emerald-400">₦{monthData.income.toLocaleString()}</span></span>
-                        <span className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">Out:</span> <span className="font-medium text-rose-600 dark:text-rose-400">₦{monthData.expenses.toLocaleString()}</span></span>
+                        <span className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">In:</span> <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(monthData.income)}</span></span>
+                        <span className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">Out:</span> <span className="font-medium text-rose-600 dark:text-rose-400">{formatCurrency(monthData.expenses)}</span></span>
                         <span className="mt-2 flex justify-between border-t border-slate-200 pt-2 font-bold dark:border-neutral-700 dark:text-white">
-                          <span>Net:</span> <span>₦{(monthData.income - monthData.expenses).toLocaleString()}</span>
+                          <span>Net:</span> <span>{formatCurrency(monthData.income - monthData.expenses)}</span>
                         </span>
                       </span>
                     ) : (
@@ -329,16 +342,25 @@ export default function Dashboard() {
             </div>
             <form onSubmit={handleQuickSubmit} className="flex flex-col gap-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Amount (₦)</label>
+                <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Amount ({user?.baseCurrency || "NGN"})</label>
                 <input type="number" min="0.01" step="0.01" required value={quickForm.amount} onChange={e => setQuickForm({...quickForm, amount: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900" placeholder="0.00"/>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Category</label>
-                <select required value={quickForm.category} onChange={e => setQuickForm({...quickForm, category: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900">
+                <select required value={quickForm.category} onChange={e => setQuickForm({...quickForm, category: e.target.value, subCategory: ""})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900">
                   <option value="" disabled>Select category</option>
                   {filteredCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
+              {selectedQuickCategory && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Sub-category</label>
+                  <input type="text" list="quick-subcategory-options" maxLength={100} value={quickForm.subCategory} onChange={e => setQuickForm({...quickForm, subCategory: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900" placeholder="Optional; choose or enter a sub-category" />
+                  <datalist id="quick-subcategory-options">
+                    {(selectedQuickCategory.subCategories || []).map((subCategory) => <option key={subCategory} value={subCategory} />)}
+                  </datalist>
+                </div>
+              )}
               <div>
                 <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Description <span className="text-neutral-500 font-normal">(Optional)</span></label>
                 <input type="text" value={quickForm.description} onChange={e => setQuickForm({...quickForm, description: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900" placeholder="What was this for?"/>
@@ -347,9 +369,6 @@ export default function Dashboard() {
                 {isSubmittingQuick ? "Saving..." : "Log Transaction"}
               </button>
             </form>
-            <div className="mt-5 pt-4 text-center border-t border-slate-100 dark:border-neutral-800">
-              <Link to="/app/transactions" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Need sub-categories? Switch to full page →</Link>
-            </div>
           </div>
         </div>
       )}
@@ -399,18 +418,18 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div onClick={() => setActiveModal('revenue')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-emerald-500/30 transition-all duration-300">
               <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Total revenue</p>
-              <h3 className={`text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(income.toLocaleString())}</h3>
+              <h3 className={`text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>{blurText(formatCurrency(income))}</h3>
             </div>
             
             <div onClick={() => setActiveModal('expenses')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-rose-500/30 transition-all duration-300">
               <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Total expenses</p>
-              <h3 className={`text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-rose-500 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(expenses.toLocaleString())}</h3>
+              <h3 className={`text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-rose-500 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>{blurText(formatCurrency(expenses))}</h3>
             </div>
             
             <div onClick={() => setActiveModal('profit')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/30 transition-all duration-300">
               <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Net profit</p>
               <div className="flex items-center gap-2 mt-1">
-                <h3 className={`text-xl font-bold transition-colors ${netProfit > 0 ? 'text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-300' : netProfit < 0 ? 'text-rose-600 dark:text-rose-400 group-hover:text-rose-500' : 'text-slate-600 dark:text-neutral-300'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(netProfit.toLocaleString())}</h3>
+                <h3 className={`text-xl font-bold transition-colors ${netProfit > 0 ? 'text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-300' : netProfit < 0 ? 'text-rose-600 dark:text-rose-400 group-hover:text-rose-500' : 'text-slate-600 dark:text-neutral-300'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>{blurText(formatCurrency(netProfit))}</h3>
                 {netProfit > 0 && <TrendingUp size={16} className="text-emerald-500" />}
               </div>
             </div>
@@ -456,7 +475,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-900 dark:text-white'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>
-                    {tx.type === 'income' ? '+' : '-'}₦{blurText(tx.amount.toLocaleString())}
+                    {tx.type === 'income' ? '+' : '-'}{blurText(formatCurrency(tx.amount))}
                   </span>
                 </div>
               ))}
@@ -470,11 +489,11 @@ export default function Dashboard() {
           
           <div className="bg-[#1e1b4b] dark:bg-black dark:border dark:border-neutral-800 text-white p-5 rounded-xl shadow-lg relative overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
             <p className="text-xs font-medium text-indigo-200 dark:text-neutral-400">Available balance</p>
-            <h3 className={`text-3xl font-bold mt-1 ${isBlurred ? 'filter blur-md select-none' : ''}`}>₦{blurText(availableBalance.toLocaleString())}</h3>
+            <h3 className={`text-3xl font-bold mt-1 ${isBlurred ? 'filter blur-md select-none' : ''}`}>{blurText(formatCurrency(availableBalance))}</h3>
             
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setQuickAction('income')} className="flex-1 bg-white dark:bg-neutral-800 text-[#1e1b4b] dark:text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors"><Plus size={14} /> Add money</button>
-              <button onClick={() => setQuickAction('expense')} className="flex-1 bg-indigo-800 dark:bg-white dark:text-black text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-700 dark:hover:bg-neutral-200 border border-indigo-700 dark:border-white transition-colors"><ArrowRight size={14} /> Transfer</button>
+              <button onClick={() => openQuickAction('income')} className="flex-1 bg-white dark:bg-neutral-800 text-[#1e1b4b] dark:text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors"><Plus size={14} /> Add money</button>
+              <button onClick={() => openQuickAction('expense')} className="flex-1 bg-indigo-800 dark:bg-white dark:text-black text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-700 dark:hover:bg-neutral-200 border border-indigo-700 dark:border-white transition-colors"><ArrowRight size={14} /> Transfer</button>
             </div>
           </div>
 
@@ -515,7 +534,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mb-4 leading-relaxed">
-                  Spent <strong className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(budgetExpenses.toLocaleString())}</strong> of <span className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(realBudgetLimit.toLocaleString())}</span>
+                  Spent <strong className={isBlurred ? 'filter blur-sm select-none' : ''}>{blurText(formatCurrency(budgetExpenses))}</strong> of <span className={isBlurred ? 'filter blur-sm select-none' : ''}>{blurText(formatCurrency(realBudgetLimit))}</span>
                 </p>
                 <div className="w-full h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-1000 ${isOverBudget ? 'bg-rose-500' : budgetPercentage > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${budgetPercentage}%` }}></div>

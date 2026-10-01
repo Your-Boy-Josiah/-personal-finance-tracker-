@@ -37,7 +37,11 @@ class AdvisoryService {
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
     const [budget, transactions] = await Promise.all([
-      Budget.findOne({ user: userId }).populate('categoryLimits.category', 'name type color'),
+      Budget.findOne({ user: userId }).populate({
+        path: 'categoryLimits.category',
+        select: 'name type color',
+        match: { $or: [{ user: userId }, { user: null }], type: 'expense' },
+      }),
       Transaction.find({
         user: userId,
         type: 'expense',
@@ -94,7 +98,7 @@ class AdvisoryService {
 
     // FIX 2: Evaluate spending vs caps using granular sub-category keys
     const overspentCategories = [];
-    (budget ? budget.categoryLimits : []).forEach(limit => {
+    (budget ? budget.categoryLimits.filter(limit => limit.category) : []).forEach(limit => {
       const categoryId = String(limit.category && limit.category._id ? limit.category._id : limit.category);
       
       // Look up the exact matching total using the subCategory logic
