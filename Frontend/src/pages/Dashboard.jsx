@@ -1,19 +1,20 @@
 // ===============================================================
 //  Dashboard.jsx
-//  High-density financial overview with interactive data visualization.
-//  Includes drill-down animations, bank sync, and quick-add modals.
+//  High-density financial overview with interactive data visualization,
+//  privacy blur, calendar catalog, and unwinding pie chart modals.
 // ===============================================================
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext"; // ADDED
 import { 
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid 
 } from "recharts";
 import { 
-  Plus, ArrowRight, TrendingUp, AlertCircle, X, ChevronLeft, 
-  RefreshCw, Landmark, CheckCircle2 
+  Plus, ArrowRight, TrendingUp, AlertCircle, X, 
+  RefreshCw, Landmark, CheckCircle2, Eye, EyeOff, Calendar
 } from "lucide-react";
 
 const COLORS = ['#8b5cf6', '#10b981', '#f59e0b', '#3b82f6', '#f43f5e', '#06b6d4', '#d946ef'];
@@ -31,26 +32,16 @@ const MemoizedBarChart = React.memo(({ data, formatYAxis }) => (
   </ResponsiveContainer>
 ));
 
-// 1. FIXED PIE CHART ANIMATION: Added chartKey to force React to remount and re-animate on drill-down
-const MemoizedPieChart = React.memo(({ data, isEmpty, onPieClick, isDrilledDown, chartKey }) => (
+const MemoizedPieChart = React.memo(({ data, isEmpty, onPieClick }) => (
   <ResponsiveContainer width="100%" height="85%">
-    <PieChart key={chartKey}>
+    <PieChart>
       <Pie 
-        data={data} 
-        innerRadius={65} 
-        outerRadius={85} 
-        paddingAngle={2} 
-        dataKey="value" 
-        stroke="none"
-        onClick={!isEmpty && !isDrilledDown ? (entry) => onPieClick(entry.payload) : undefined}
-        cursor={!isEmpty && !isDrilledDown ? "pointer" : "default"}
+        data={data} innerRadius={65} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none"
+        onClick={!isEmpty ? (entry) => onPieClick(entry.payload) : undefined}
+        cursor={!isEmpty ? "pointer" : "default"}
       >
         {data.map((entry, index) => (
-          <Cell 
-            key={`cell-${index}`} 
-            fill={isEmpty ? '#262626' : (entry.color || COLORS[index % COLORS.length])} 
-            className={!isEmpty && !isDrilledDown ? "hover:opacity-80 transition-opacity outline-none" : "outline-none"}
-          />
+          <Cell key={`cell-${index}`} fill={isEmpty ? '#262626' : (entry.color || COLORS[index % COLORS.length])} className={!isEmpty ? "hover:opacity-80 transition-opacity outline-none" : "outline-none"} />
         ))}
       </Pie>
       {!isEmpty && <RechartsTooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', backgroundColor: '#171717', color: '#fff' }} />}
@@ -58,8 +49,16 @@ const MemoizedPieChart = React.memo(({ data, isEmpty, onPieClick, isDrilledDown,
   </ResponsiveContainer>
 ));
 
+// Helper for dynamic image pathing
+const getAvatarUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http') || path.startsWith('blob')) return path;
+  return `http://localhost:5000${path}`;
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // ADDED
   
   // Data States
   const [summary, setSummary] = useState(null);
@@ -67,12 +66,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Synced Connected Banks State
+  const [connectedBanks, setConnectedBanks] = useState([]);
+
   // UI Interactive States
   const [activeModal, setActiveModal] = useState(null); 
-  const [activePieCategory, setActivePieCategory] = useState(null);
+  const [pieModalData, setPieModalData] = useState(null); 
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [isBlurred, setIsBlurred] = useState(false); 
   
   // Quick Action & Sync States
-  const [quickAction, setQuickAction] = useState(null); // 'income' or 'expense'
+  const [quickAction, setQuickAction] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
   const [quickForm, setQuickForm] = useState({ amount: "", category: "", description: "" });
@@ -86,6 +90,11 @@ export default function Dashboard() {
       ]);
       setSummary(dashRes.data.data || dashRes.data);
       setCategories(catRes.data.data || []);
+      
+      // Load synced banks
+      const savedBanks = localStorage.getItem("user_connected_banks");
+      if (savedBanks) setConnectedBanks(JSON.parse(savedBanks));
+      
     } catch (err) {
       setError("Failed to load dashboard data.");
     } finally {
@@ -93,22 +102,15 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  useEffect(() => { fetchDashboardData(); }, []);
 
-  // --- Handlers ---
   const handleBankSync = async () => {
     setIsSyncing(true);
     try {
-      // Calls your Mono/Okra backend sync route (adjust route if your backend path differs slightly)
       await api.post('/transactions/sync'); 
       await fetchDashboardData(); 
-    } catch (err) {
-      console.error("Sync failed", err);
-    } finally {
-      setIsSyncing(false);
-    }
+    } catch (err) { console.error("Sync failed", err); } 
+    finally { setIsSyncing(false); }
   };
 
   const handleQuickSubmit = async (e) => {
@@ -124,12 +126,9 @@ export default function Dashboard() {
       });
       setQuickAction(null);
       setQuickForm({ amount: "", category: "", description: "" });
-      await fetchDashboardData(); // Refresh UI silently
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to add transaction");
-    } finally {
-      setIsSubmittingQuick(false);
-    }
+      await fetchDashboardData();
+    } catch (err) { alert(err.response?.data?.message || "Failed to add transaction"); } 
+    finally { setIsSubmittingQuick(false); }
   };
 
   if (loading) return <div className="p-8 text-sm text-slate-500 dark:text-neutral-400">Loading your data...</div>;
@@ -151,19 +150,13 @@ export default function Dashboard() {
   const currentMonthName = new Date().toLocaleString('default', { month: 'short' });
   const barData = summary?.monthlyData?.length > 0 ? summary.monthlyData : [{ month: currentMonthName, income, expenses }];
 
-  // Pie Chart Data mapping
   const isCategoryEmpty = !summary?.categorySpending?.length;
-  const baseCategoryData = isCategoryEmpty ? [{ name: 'No Data', value: 1 }] : summary.categorySpending;
-  const pieData = activePieCategory 
-    ? activePieCategory.subCategories.map((sub) => ({
-        name: sub.name,
-        value: sub.value,
-        color: activePieCategory.color
-      }))
-    : baseCategoryData;
+  const categoryData = isCategoryEmpty ? [{ name: 'No Data', value: 1 }] : summary.categorySpending;
 
   const handlePieClick = (payload) => {
-    if (payload.subCategories && payload.subCategories.length > 0) setActivePieCategory(payload);
+    if (payload.subCategories && payload.subCategories.length > 0) {
+      setPieModalData(payload);
+    }
   };
 
   const formatYAxis = (value) => {
@@ -172,6 +165,8 @@ export default function Dashboard() {
     return value;
   };
 
+  const blurText = (text) => isBlurred ? "••••••" : text;
+
   const modalConfig = {
     revenue: { title: "Revenue Trend (Last 30 Days)", key: "income", color: "#8b5cf6" },
     expenses: { title: "Expense Trend (Last 30 Days)", key: "expenses", color: "#f43f5e" },
@@ -179,6 +174,8 @@ export default function Dashboard() {
   };
 
   const filteredCategories = categories.filter(c => c.type === quickAction);
+  const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const avatarUrl = getAvatarUrl(user?.avatar);
 
   return (
     <div className="p-4 md:p-6 mx-auto max-w-[1600px] relative">
@@ -187,17 +184,14 @@ export default function Dashboard() {
       {/* MODALS */}
       {/* ========================================================= */}
       
-      {/* A. TREND GRAPHS MODAL */}
+      {/* TREND GRAPHS MODAL */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setActiveModal(null)}>
           <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-bold dark:text-white">{modalConfig[activeModal].title}</h2>
-              <button onClick={() => setActiveModal(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors">
-                <X size={20} />
-              </button>
+              <button onClick={() => setActiveModal(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
             </div>
-            
             <div className="h-[400px] w-full">
               {dailyData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-slate-500">No transaction data available for the last 30 days.</div>
@@ -213,10 +207,7 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.2} />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#737373' }} minTickGap={30} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#737373' }} tickFormatter={formatYAxis} width={60} />
-                    <RechartsTooltip 
-                      contentStyle={{ borderRadius: '8px', fontSize: '13px', border: 'none', backgroundColor: '#171717', color: '#fff' }} 
-                      formatter={(value) => [`₦${value.toLocaleString()}`, modalConfig[activeModal].key.charAt(0).toUpperCase() + modalConfig[activeModal].key.slice(1)]}
-                    />
+                    <RechartsTooltip contentStyle={{ borderRadius: '8px', fontSize: '13px', border: 'none', backgroundColor: '#171717', color: '#fff' }} formatter={(value) => [`₦${value.toLocaleString()}`, modalConfig[activeModal].key.charAt(0).toUpperCase() + modalConfig[activeModal].key.slice(1)]}/>
                     <Area type="monotone" dataKey={modalConfig[activeModal].key} stroke={modalConfig[activeModal].color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${activeModal})`} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -226,59 +217,104 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* B. QUICK ACTION MODAL (ADD MONEY / TRANSFER) */}
+      {/* UNWINDING PIE MODAL */}
+      {pieModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPieModalData(null)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold dark:text-white flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: pieModalData.color }}></span>
+                {pieModalData.name} Breakdown
+              </h2>
+              <button onClick={() => setPieModalData(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
+            </div>
+            
+            <p className="text-2xl font-bold mb-6 dark:text-white">Total: ₦{pieModalData.value.toLocaleString()}</p>
+            
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+              {pieModalData.subCategories.map((sub, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3 rounded-lg border border-slate-100 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <span className="text-sm font-medium dark:text-neutral-300">{sub.name}</span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-bold dark:text-white">₦{sub.value.toLocaleString()}</span>
+                    <span className="text-[10px] text-slate-500">{Math.round((sub.value / pieModalData.value) * 100)}% of {pieModalData.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CALENDAR CATALOG MODAL */}
+      {showCalendar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setShowCalendar(false)}>
+          <div className="w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
+            <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4 dark:border-neutral-800">
+              <h2 className="text-xl font-bold dark:text-white">Annual Financial Catalog</h2>
+              <button onClick={() => setShowCalendar(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {allMonths.map((monthStr, idx) => {
+                const monthData = summary?.monthlyData?.find(m => m.month === monthStr);
+                const isCurrent = monthStr === currentMonthName;
+                
+                return (
+                  <div key={idx} className={`p-4 rounded-xl border ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-900/30'}`}>
+                    <h3 className="font-bold text-sm mb-3 flex items-center justify-between dark:text-white">
+                      {monthStr}
+                      {isCurrent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">Current</span>}
+                    </h3>
+                    {monthData ? (
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">In:</span> <span className="font-medium text-emerald-600 dark:text-emerald-400">₦{monthData.income.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500 dark:text-neutral-400">Out:</span> <span className="font-medium text-rose-600 dark:text-rose-400">₦{monthData.expenses.toLocaleString()}</span></div>
+                        <div className="pt-2 mt-2 border-t border-slate-200 dark:border-neutral-700 flex justify-between font-bold dark:text-white">
+                          <span>Net:</span> <span>₦{(monthData.income - monthData.expenses).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-[80px] flex items-center justify-center text-xs text-slate-400 dark:text-neutral-600">No data</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK ACTION MODAL */}
       {quickAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setQuickAction(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-4">
-              <h2 className="text-lg font-bold dark:text-white">
-                {quickAction === 'income' ? 'Add Money (Income)' : 'Transfer (Expense)'}
-              </h2>
-              <button onClick={() => setQuickAction(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors">
-                <X size={18} />
-              </button>
+              <h2 className="text-lg font-bold dark:text-white">{quickAction === 'income' ? 'Add Money (Income)' : 'Transfer (Expense)'}</h2>
+              <button onClick={() => setQuickAction(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={18} /></button>
             </div>
-            
             <form onSubmit={handleQuickSubmit} className="flex flex-col gap-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Amount (₦)</label>
-                <input 
-                  type="number" min="0.01" step="0.01" required 
-                  value={quickForm.amount} onChange={e => setQuickForm({...quickForm, amount: e.target.value})}
-                  placeholder="0.00" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                />
+                <input type="number" min="0.01" step="0.01" required value={quickForm.amount} onChange={e => setQuickForm({...quickForm, amount: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900" placeholder="0.00"/>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Category</label>
-                <select 
-                  required value={quickForm.category} onChange={e => setQuickForm({...quickForm, category: e.target.value})}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                >
+                <select required value={quickForm.category} onChange={e => setQuickForm({...quickForm, category: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900">
                   <option value="" disabled>Select category</option>
-                  {filteredCategories.map(c => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
-                  ))}
+                  {filteredCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium dark:text-neutral-300">Description <span className="text-neutral-500 font-normal">(Optional)</span></label>
-                <input 
-                  type="text" value={quickForm.description} onChange={e => setQuickForm({...quickForm, description: e.target.value})}
-                  placeholder="What was this for?" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                />
+                <input type="text" value={quickForm.description} onChange={e => setQuickForm({...quickForm, description: e.target.value})} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-900" placeholder="What was this for?"/>
               </div>
-              <button 
-                type="submit" disabled={isSubmittingQuick}
-                className={`mt-2 rounded-lg py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${quickAction === 'income' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}
-              >
+              <button type="submit" disabled={isSubmittingQuick} className={`mt-2 rounded-lg py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${quickAction === 'income' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
                 {isSubmittingQuick ? "Saving..." : "Log Transaction"}
               </button>
             </form>
-            
             <div className="mt-5 pt-4 text-center border-t border-slate-100 dark:border-neutral-800">
-              <Link to="/app/transactions" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
-                Need to add sub-categories or past dates? Switch to full page →
-              </Link>
+              <Link to="/app/transactions" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Need sub-categories? Switch to full page →</Link>
             </div>
           </div>
         </div>
@@ -287,10 +323,38 @@ export default function Dashboard() {
       {/* ========================================================= */}
       {/* MAIN DASHBOARD LAYOUT */}
       {/* ========================================================= */}
+      
+      {/* HEADER SECTION with Privacy, Calendar & User Avatar */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold dark:text-white">Financial overview</h1>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">Track income, spending and account growth.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowCalendar(true)}
+            className="flex items-center gap-2 rounded-md bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+          >
+            <Calendar size={16} /> Annual View
+          </button>
+          <button 
+            onClick={() => setIsBlurred(!isBlurred)}
+            className="flex items-center gap-2 rounded-md bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+          >
+            {isBlurred ? <EyeOff size={16} /> : <Eye size={16} />} 
+            {isBlurred ? "Hidden" : "Visible"}
+          </button>
+          
+          {/* USER AVATAR DISPLAY */}
+          <div className="ml-2 h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100 dark:border-neutral-700 dark:bg-neutral-800">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="User Profile" className="h-full w-full object-cover object-center" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-400 uppercase">
+                {user?.firstName?.charAt(0) || 'U'}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -298,67 +362,40 @@ export default function Dashboard() {
         
         {/* LEFT COLUMN: MAIN CHARTS */}
         <div className="xl:col-span-8 space-y-5">
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div onClick={() => setActiveModal('revenue')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-emerald-500/30 transition-all duration-300" title="Click to view daily trend">
+            <div onClick={() => setActiveModal('revenue')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-emerald-500/30 transition-all duration-300">
               <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Total revenue</p>
-              <h3 className="text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">₦{income.toLocaleString()}</h3>
+              <h3 className={`text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(income.toLocaleString())}</h3>
             </div>
             
-            <div onClick={() => setActiveModal('expenses')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-rose-500/30 transition-all duration-300" title="Click to view daily trend">
+            <div onClick={() => setActiveModal('expenses')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-rose-500/30 transition-all duration-300">
               <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Total expenses</p>
-              <h3 className="text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-rose-500 transition-colors">₦{expenses.toLocaleString()}</h3>
+              <h3 className={`text-xl font-bold mt-1 text-slate-900 dark:text-white group-hover:text-rose-500 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(expenses.toLocaleString())}</h3>
             </div>
             
-            <div onClick={() => setActiveModal('profit')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/30 transition-all duration-300" title="Click to view daily trend">
+            <div onClick={() => setActiveModal('profit')} className="group bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/30 transition-all duration-300">
               <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Net profit</p>
               <div className="flex items-center gap-2 mt-1">
-                <h3 className="text-xl font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-300 transition-colors">₦{netProfit.toLocaleString()}</h3>
+                <h3 className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-300 transition-colors ${isBlurred ? 'filter blur-sm select-none' : ''}`}>₦{blurText(netProfit.toLocaleString())}</h3>
                 {netProfit > 0 && <TrendingUp size={16} className="text-emerald-500" />}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm h-[300px] hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+            <div className={`bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm h-[300px] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 ${isBlurred ? 'filter blur-[3px] select-none pointer-events-none' : ''}`}>
               <h3 className="text-sm font-bold mb-4 dark:text-white">Revenue & expenses</h3>
               <MemoizedBarChart data={barData} formatYAxis={formatYAxis} />
             </div>
             
-            <div className="bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm h-[300px] relative hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col">
+            <div className={`bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm h-[300px] relative hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col ${isBlurred ? 'filter blur-[3px] select-none pointer-events-none' : ''}`}>
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-bold dark:text-white truncate pr-2">
-                  {activePieCategory ? `Expenses: ${activePieCategory.name}` : 'Expenses by Category'}
-                </h3>
-                {activePieCategory && (
-                  <button 
-                    onClick={() => setActivePieCategory(null)}
-                    className="flex shrink-0 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
-                  >
-                    <ChevronLeft size={14} /> Back
-                  </button>
-                )}
+                <h3 className="text-sm font-bold dark:text-white truncate pr-2">Expenses by Category</h3>
               </div>
-              
               <div className="flex-1 relative">
-                {/* 1. FIXED ANIMATION: Passing a dynamic chartKey forces Recharts to animate the transition */}
-                <MemoizedPieChart 
-                  chartKey={activePieCategory ? activePieCategory.name : 'main'}
-                  data={pieData} 
-                  isEmpty={isCategoryEmpty} 
-                  onPieClick={handlePieClick} 
-                  isDrilledDown={!!activePieCategory}
-                />
-                {isCategoryEmpty && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-xs text-neutral-500">No category data.</span>
-                  </div>
-                )}
-                {!isCategoryEmpty && !activePieCategory && (
-                  <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none pb-2">
-                    <span className="text-[10px] text-slate-400 dark:text-neutral-500">Click a slice to view sub-categories</span>
-                  </div>
-                )}
+                <MemoizedPieChart data={categoryData} isEmpty={isCategoryEmpty} onPieClick={handlePieClick} />
+                {isCategoryEmpty && <div className="absolute inset-0 flex items-center justify-center"><span className="text-xs text-neutral-500">No category data.</span></div>}
+                {!isCategoryEmpty && <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none pb-2"><span className="text-[10px] text-slate-400 dark:text-neutral-500">Click a slice for breakdown</span></div>}
               </div>
             </div>
           </div>
@@ -378,23 +415,17 @@ export default function Dashboard() {
                     <div>
                       <p className="text-sm font-medium dark:text-white flex items-center gap-2">
                         {tx.description || tx.merchant || 'Transaction'}
-                        {tx.subCategory && (
-                          <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[10px] uppercase text-slate-600 dark:bg-neutral-800 dark:text-neutral-400">
-                            {tx.subCategory}
-                          </span>
-                        )}
+                        {tx.subCategory && <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[10px] uppercase text-slate-600 dark:bg-neutral-800 dark:text-neutral-400">{tx.subCategory}</span>}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-neutral-500">{new Date(tx.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-900 dark:text-white'}`}>
-                    {tx.type === 'income' ? '+' : '-'}₦{tx.amount.toLocaleString()}
+                  <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-900 dark:text-white'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>
+                    {tx.type === 'income' ? '+' : '-'}₦{blurText(tx.amount.toLocaleString())}
                   </span>
                 </div>
               ))}
-              {recentTransactions.length === 0 && (
-                <div className="p-6 text-center text-xs text-slate-500 dark:text-neutral-500">No recent transactions recorded yet.</div>
-              )}
+              {recentTransactions.length === 0 && <div className="p-6 text-center text-xs text-slate-500 dark:text-neutral-500">No recent transactions recorded yet.</div>}
             </div>
           </div>
         </div>
@@ -404,102 +435,70 @@ export default function Dashboard() {
           
           <div className="bg-[#1e1b4b] dark:bg-black dark:border dark:border-neutral-800 text-white p-5 rounded-xl shadow-lg relative overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
             <p className="text-xs font-medium text-indigo-200 dark:text-neutral-400">Available balance</p>
-            <h3 className="text-3xl font-bold mt-1">₦{availableBalance.toLocaleString()}</h3>
+            <h3 className={`text-3xl font-bold mt-1 ${isBlurred ? 'filter blur-md select-none' : ''}`}>₦{blurText(availableBalance.toLocaleString())}</h3>
             
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setQuickAction('income')} className="flex-1 bg-white dark:bg-neutral-800 text-[#1e1b4b] dark:text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors">
-                <Plus size={14} /> Add money
-              </button>
-              <button onClick={() => setQuickAction('expense')} className="flex-1 bg-indigo-800 dark:bg-white dark:text-black text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-700 dark:hover:bg-neutral-200 border border-indigo-700 dark:border-white transition-colors">
-                <ArrowRight size={14} /> Transfer
-              </button>
+              <button onClick={() => setQuickAction('income')} className="flex-1 bg-white dark:bg-neutral-800 text-[#1e1b4b] dark:text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors"><Plus size={14} /> Add money</button>
+              <button onClick={() => setQuickAction('expense')} className="flex-1 bg-indigo-800 dark:bg-white dark:text-black text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-700 dark:hover:bg-neutral-200 border border-indigo-700 dark:border-white transition-colors"><ArrowRight size={14} /> Transfer</button>
             </div>
           </div>
 
-          {/* 3. NEW CONNECTED BANKS WIDGET */}
+          {/* DYNAMIC BANK HUB */}
           <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-bold dark:text-white flex items-center gap-2">
-                <Landmark size={16} className="text-indigo-500"/> Connected Accounts
+                <Landmark size={16} className="text-indigo-500"/> Connected Banks
               </h3>
-              <button
-                onClick={handleBankSync}
-                disabled={isSyncing}
-                className="flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                title="Sync latest bank transactions"
-              >
+              <button onClick={handleBankSync} disabled={isSyncing} className="flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
                 <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
-                {isSyncing ? "Syncing..." : "Sync"}
+                {isSyncing ? "Syncing" : "Sync"}
               </button>
             </div>
             
             <div className="space-y-3">
-              {/* Default Mock Connected Account - Can be mapped if backend sends active connections */}
-              <div className="flex items-center justify-between p-3 border border-slate-100 dark:border-neutral-800 rounded-lg bg-slate-50 dark:bg-neutral-900/50 hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors cursor-pointer">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-neutral-800 flex items-center justify-center">
-                    <Landmark size={14} className="text-slate-600 dark:text-slate-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">Primary Account</p>
-                    <p className="text-[10px] text-slate-500 dark:text-neutral-500">Auto-sync active</p>
-                  </div>
+              {connectedBanks.length === 0 ? (
+                <div className="text-center py-4 text-xs text-slate-500 dark:text-neutral-400 border border-dashed border-slate-300 dark:border-neutral-700 rounded-lg">
+                  No banks linked. Visit Settings.
                 </div>
-                <CheckCircle2 size={16} className="text-emerald-500" />
-              </div>
+              ) : (
+                connectedBanks.map(bank => (
+                  <div key={bank.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-neutral-800 rounded-lg bg-slate-50 dark:bg-neutral-900/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 flex items-center justify-center"><Landmark size={14} /></div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                          {bank.name} <CheckCircle2 size={12} className="text-emerald-500" />
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-neutral-500">{bank.type} • Active</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-sm font-bold dark:text-white">Monthly Budget</h3>
-              <Link to="/app/budget" className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Manage Limits</Link>
+              <Link to="/app/budget" className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Manage</Link>
             </div>
-            
             {!hasBudgetLimit ? (
               <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg p-4 mt-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-indigo-900 dark:text-indigo-300 leading-relaxed">
-                  You haven't set a budget yet. Set a spending limit to track your goals!
-                </p>
+                <p className="text-xs text-indigo-900 dark:text-indigo-300 leading-relaxed">You haven't set a budget yet. Set a spending limit to track goals!</p>
               </div>
             ) : (
               <>
                 <p className="text-xs text-slate-500 dark:text-neutral-400 mb-4 leading-relaxed">
-                  You have spent <strong>₦{expenses.toLocaleString()}</strong> of your ₦{realBudgetLimit.toLocaleString()} limit.
+                  Spent <strong className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(expenses.toLocaleString())}</strong> of <span className={isBlurred ? 'filter blur-sm select-none' : ''}>₦{blurText(realBudgetLimit.toLocaleString())}</span>
                 </p>
                 <div className="w-full h-2 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-1000 ${isOverBudget ? 'bg-rose-500' : budgetPercentage > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                    style={{ width: `${budgetPercentage}%` }}
-                  ></div>
+                  <div className={`h-full rounded-full transition-all duration-1000 ${isOverBudget ? 'bg-rose-500' : budgetPercentage > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${budgetPercentage}%` }}></div>
                 </div>
               </>
             )}
           </div>
-
-          <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-bold dark:text-white">
-                {activePieCategory ? `Sub-categories: ${activePieCategory.name}` : 'Spending breakdown'}
-              </h3>
-            </div>
-            
-            <div className="space-y-4">
-              {pieData.slice(0, 5).map((cat, i) => (
-                <div key={i} className="flex justify-between items-center text-xs group cursor-default">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full transition-transform duration-300 group-hover:scale-150" style={{ backgroundColor: isCategoryEmpty ? '#262626' : (cat.color || COLORS[i % COLORS.length]) }}></div>
-                    <span className="font-medium text-slate-600 dark:text-neutral-400 transition-colors">{cat.name}</span>
-                  </div>
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {isCategoryEmpty ? '-' : `₦${cat.value.toLocaleString()}`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
       </div>
     </div>

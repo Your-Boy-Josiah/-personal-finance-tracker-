@@ -251,6 +251,32 @@ const changePassword = async (req, res) => {
   }
 };
 
+// ============================================================== 
+// @desc    Upload & update user profile avatar
+// @route   PUT /api/auth/avatar
+// @access  Private
+// ============================================================== 
+const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload an image file' });
+    }
+
+    // Create the public URL path for the image
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar: avatarUrl },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.status(200).json({ success: true, data: updatedUser, message: 'Avatar updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error uploading avatar', error: error.message });
+  }
+};
+
 // ============================================================
 // EXPORT CONTROLLERS
 // ============================================================
@@ -262,5 +288,6 @@ module.exports = {
   resetPassword,
   getMe,           
   updateProfile,
-  changePassword
+  changePassword,
+  uploadAvatar // ADDED
 };

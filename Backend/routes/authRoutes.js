@@ -1,11 +1,13 @@
 // ===============================================================
 //  authRoutes.js
 //  Defines the API endpoints for user authentication, including
-//  the forgot/reset password flow and profile management.
+//  profile management, password resets, and avatar file uploads.
 // ===============================================================
 
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 
 // Import controller functions
 const { 
@@ -13,18 +15,15 @@ const {
   loginUser, 
   forgotPassword, 
   resetPassword,
-  getMe,          // ADDED: Profile endpoints
-  updateProfile,  // ADDED: Profile endpoints
-  changePassword
+  getMe,           
+  updateProfile,   
+  changePassword,
+  uploadAvatar      // ADDED: Avatar upload controller
 } = require('../controllers/authController');
 
-// Import authentication middleware
-const { protect } = require('../middleware/authMiddleware'); // ADDED: to protect profile routes
-
-// Import validation middleware
+const { protect } = require('../middleware/authMiddleware'); 
 const validate = require('../utils/validate');
 
-// Import Joi validation schemas for request body validation
 const {
   registerSchema,
   loginSchema,
@@ -35,50 +34,57 @@ const {
 } = require('../validations/authSchema');
 
 // ==============================================================
+// MULTER CONFIGURATION (IMAGE UPLOADS)
+// ==============================================================
+
+const storage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, 'uploads/avatars/'); // Files will be saved here locally
+  },
+  filename(req, file, cb) {
+    // Creates a unique filename: e.g., avatar-163456789.jpg
+    cb(null, `avatar-${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+
+const checkFileType = (file, cb) => {
+  const filetypes = /jpg|jpeg|png/;
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = filetypes.test(file.mimetype);
+
+  if (extname && mimetype) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Images only (JPG, JPEG, PNG)!'));
+  }
+};
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  fileFilter: function (req, file, cb) {
+    checkFileType(file, cb);
+  }
+});
+
+// ==============================================================
 // PUBLIC ROUTES
 // ==============================================================
 
-// @route   POST /api/auth/register
-// @desc    Register a new user in the database
-// @access  Public
 router.post('/register', validate(registerSchema), registerUser);
-
-// @route   POST /api/auth/login
-// @desc    Verify credentials and return JWT token
-// @access  Public
 router.post('/login', validate(loginSchema), loginUser);
-
-// @route   POST /api/auth/forgot-password
-// @desc    Generate a password reset token for the given email
-// @access  Public
 router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword); 
-
-// @route   PUT /api/auth/reset-password/:token
-// @desc    Reset a user's password using a valid reset token
-// @access  Public
 router.put('/reset-password/:token', validate(resetPasswordSchema), resetPassword); 
 
 // ==============================================================
 // PRIVATE ROUTES
 // ==============================================================
 
-// @route   GET /api/auth/me
-// @desc    Get current logged in user profile
-// @access  Private
 router.get('/me', protect, getMe);
-
-// @route   PUT /api/auth/profile
-// @desc    Update user profile details
-// @access  Private
-// @route   PUT /api/auth/password
-// @desc    Change the current user's password
-// @access  Private
+router.put('/profile', protect, validate(updateProfileSchema), updateProfile);
 router.put('/password', protect, validate(changePasswordSchema), changePassword);
 
-router.put('/profile', protect, validate(updateProfileSchema), updateProfile);
-
-// ============================================================
-// EXPORT ROUTER
-// ============================================================
+// NEW: Avatar upload route using Multer middleware
+router.put('/avatar', protect, upload.single('avatar'), uploadAvatar);
 
 module.exports = router;

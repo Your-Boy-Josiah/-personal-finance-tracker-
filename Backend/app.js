@@ -6,6 +6,7 @@
 // ===============================================================
 
 const express = require("express");
+const path = require('path');
 const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -48,6 +49,8 @@ app.use(cors()); // Enables Cross-Origin Resource Sharing for the React frontend
 app.use(express.json()); // Parses incoming JSON payloads in request bodies
 app.use("/api", apiLimiter); // Applies rate limiting to all /api routes
 app.use('/api/alerts', require('./routes/alertRoutes'));
+// Make uploads directory accessible to the frontend
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ==============================================================
 // API ROUTES
