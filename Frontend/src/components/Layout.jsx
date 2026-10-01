@@ -27,11 +27,15 @@ export default function Layout() {
   
   // --- Resizable Sidebar State ---
   const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (!window.matchMedia("(min-width: 768px)").matches) {
+      return MIN_WIDTH;
+    }
+
     const savedWidth = localStorage.getItem("monie-track-sidebar-width");
     if (savedWidth !== null) {
       return parseInt(savedWidth, 10);
     }
-    return window.matchMedia("(min-width: 768px)").matches ? DEFAULT_WIDTH : MIN_WIDTH;
+    return DEFAULT_WIDTH;
   });
 
   const [isDragging, setIsDragging] = useState(false);
@@ -134,9 +138,17 @@ export default function Layout() {
       // Prevent messy text selection highlighting while dragging
       style={{ userSelect: isDragging ? "none" : "auto" }}
     >
+      {sidebarWidth > MIN_WIDTH && (
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label="Close navigation"
+          className="fixed inset-0 z-10 bg-black/40 md:hidden"
+        />
+      )}
       <aside 
         style={{ width: sidebarWidth }}
-        className={`sticky top-0 z-20 flex h-screen shrink-0 flex-col bg-[#0f2923] text-white shadow-xl dark:border-r dark:border-neutral-800 dark:bg-[#050505] ${
+        className={`${sidebarWidth > MIN_WIDTH ? "fixed left-0 top-0 max-w-[78vw] md:sticky md:left-auto md:top-0 md:max-w-none" : "sticky top-0"} z-20 flex h-screen shrink-0 flex-col bg-[#0f2923] text-white shadow-xl dark:border-r dark:border-neutral-800 dark:bg-[#050505] ${
           isDragging ? "transition-none" : "transition-all duration-300 ease-in-out"
         }`}
       >

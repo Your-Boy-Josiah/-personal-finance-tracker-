@@ -47,9 +47,10 @@ export default function Account() {
   const [errors, setErrors] = useState({ profile: "", password: "", avatar: "" });
 
   const [bankConnecting, setBankConnecting] = useState(false);
-  
+  const [bankError, setBankError] = useState("");
   const [showBankModal, setShowBankModal] = useState(false);
   const [bankMessage, setBankMessage] = useState("");
+  const [newBank, setNewBank] = useState({ name: "", type: "Savings" });
   const bankCode = new URLSearchParams(location.search).get("code") || new URLSearchParams(location.search).get("publicToken");
 
   useEffect(() => {
