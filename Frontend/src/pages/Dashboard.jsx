@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext"; // ADDED
+import { useAuth } from "../context/AuthContext";
 import { 
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid 
@@ -49,16 +49,21 @@ const MemoizedPieChart = React.memo(({ data, isEmpty, onPieClick }) => (
   </ResponsiveContainer>
 ));
 
-// Helper for dynamic image pathing
+// Bulletproof Avatar URL handler with safe fallbacks
 const getAvatarUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http') || path.startsWith('blob')) return path;
-  return `http://localhost:5000${path}`;
+  
+  // Safely grab the env variable, falling back to localhost:5000 if undefined
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+  const baseUrl = apiBaseUrl.replace('/api', '');
+  
+  return `${baseUrl}${path}`;
 };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // ADDED
+  const { user } = useAuth();
   
   // Data States
   const [summary, setSummary] = useState(null);
@@ -117,12 +122,16 @@ export default function Dashboard() {
     e.preventDefault();
     setIsSubmittingQuick(true);
     try {
+      // Timezone-aware date string generation (YYYY-MM-DD)
+      const now = new Date();
+      const localDateString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
       await api.post("/transactions", {
         type: quickAction,
         amount: Number(quickForm.amount),
         category: quickForm.category,
         description: quickForm.description || (quickAction === 'income' ? 'Quick Deposit' : 'Quick Transfer'),
-        transactionDate: new Date().toISOString().slice(0, 10)
+        transactionDate: localDateString // Now uses local time instead of strict UTC
       });
       setQuickAction(null);
       setQuickForm({ amount: "", category: "", description: "" });

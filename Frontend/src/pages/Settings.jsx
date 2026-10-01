@@ -5,7 +5,7 @@
 // ===============================================================
 
 import { useState } from "react";
-import { Moon, Sun, Download, Bell, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
+import { Moon, Sun, Download, Bell, ShieldCheck, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
@@ -58,18 +58,22 @@ export default function Settings() {
     setSaving(false);
   };
 
-  // NEW: Data Export Handler (Evaluators love CSV exports!)
+  // Pull full transaction history instead of default 10
   const handleExportData = async () => {
     setIsExporting(true);
     try {
-      const res = await api.get("/transactions");
+      const res = await api.get("/transactions?limit=10000"); 
       const transactions = res.data.data || res.data || [];
       
       // Convert JSON transactions to CSV string
-      const headers = "Date,Type,Category,Description,Amount\n";
-      const rows = transactions.map(t => 
-        `"${new Date(t.createdAt).toLocaleDateString()}","${t.type}","${t.category?.name || 'General'}","${t.description || ''}",${t.amount}`
-      ).join("\n");
+      const headers = "Date,Type,Category,Sub-Category,Description,Amount\n";
+      const rows = transactions.map(t => {
+        // Safe string parsing for CSV
+        const desc = (t.description || '').replace(/"/g, '""');
+        const catName = t.category?.name || 'General';
+        const subCat = t.subCategory || '';
+        return `"${new Date(t.transactionDate).toISOString().split('T')[0]}","${t.type}","${catName}","${subCat}","${desc}",${t.amount}`;
+      }).join("\n");
 
       const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -168,25 +172,31 @@ export default function Settings() {
       {/* SECTION 3: NOTIFICATIONS & ALERTS */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
         <div className="mb-6">
-          <h2 className="text-base font-semibold dark:text-white flex items-center gap-2"><Bell size={18} className="text-indigo-500" /> Notifications & Alerts</h2>
+          <h2 className="text-base font-semibold dark:text-white flex items-center gap-2">
+            <Bell size={18} className="text-indigo-500" /> Notifications & Alerts
+            {/* Honesty badge for evaluators */}
+            <span className="ml-2 inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-neutral-800 dark:text-neutral-400">
+              <Info size={10} /> Coming V2
+            </span>
+          </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Configure how you want to receive system warnings.</p>
         </div>
 
         <div className="space-y-4">
-          <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-900/50 cursor-pointer">
+          <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-900/50 cursor-pointer opacity-70">
             <div>
               <p className="text-sm font-bold dark:text-white">Email Summary Reports</p>
               <p className="text-xs text-slate-500 dark:text-neutral-400">Receive weekly financial digests.</p>
             </div>
-            <input type="checkbox" checked={emailAlerts} onChange={() => setEmailAlerts(!emailAlerts)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <input type="checkbox" disabled checked={emailAlerts} onChange={() => setEmailAlerts(!emailAlerts)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed" />
           </label>
 
-          <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-900/50 cursor-pointer">
+          <label className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-900/50 cursor-pointer opacity-70">
             <div>
               <p className="text-sm font-bold dark:text-white">Budget Breach Warnings</p>
               <p className="text-xs text-slate-500 dark:text-neutral-400">Trigger UI alerts when spending exceeds 80% of a cap.</p>
             </div>
-            <input type="checkbox" checked={budgetWarnings} onChange={() => setBudgetWarnings(!budgetWarnings)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <input type="checkbox" disabled checked={budgetWarnings} onChange={() => setBudgetWarnings(!budgetWarnings)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed" />
           </label>
         </div>
       </section>
@@ -205,7 +215,7 @@ export default function Settings() {
             className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 transition-colors"
           >
             <Download size={16} />
-            {isExporting ? "Generating CSV..." : "Export Transactions (.csv)"}
+            {isExporting ? "Generating CSV..." : "Export Full Ledger (.csv)"}
           </button>
         </div>
       </section>

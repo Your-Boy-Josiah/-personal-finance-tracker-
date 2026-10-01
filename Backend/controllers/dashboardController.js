@@ -31,16 +31,15 @@ const getDashboardSummary = async (req, res) => {
     // Fetch User's Total Budget Limit
     const userBudgets = await Budget.find({ user: userId });
     const totalBudgetLimit = userBudgets.reduce((sum, budget) => {
-      if (budget.amount != null || budget.limit != null) {
-        return sum + Number(budget.amount ?? budget.limit ?? 0);
-      }
       const categoryLimits = budget.categoryLimits;
+      
+      // Removed dead branch. Direct sum of spendingCaps
       const categoryTotal = Array.isArray(categoryLimits)
         ? categoryLimits.reduce(
-            (categorySum, category) => categorySum + Number(category.spendingCap ?? category.limit ?? category.amount ?? 0),
+            (categorySum, category) => categorySum + Number(category.spendingCap ?? 0),
             0
           )
-        : Number(categoryLimits?.spendingCap ?? categoryLimits?.limit ?? categoryLimits?.amount ?? 0);
+        : Number(categoryLimits?.spendingCap ?? 0);
 
       return sum + categoryTotal;
     }, 0);
@@ -54,19 +53,17 @@ const getDashboardSummary = async (req, res) => {
     // Category Spending (Drill-Down Setup: Group by category AND subCategory)
     const categorySpendingRaw = await Transaction.aggregate([
       { $match: { user: userId, type: 'expense' } },
-      // First, group by both category and subCategory
       { $group: { 
           _id: { category: "$category", subCategory: "$subCategory" }, 
           value: { $sum: "$amount" } 
         } 
       },
-      // Second, group by just the category to nest the subCategories
       { $group: {
           _id: "$_id.category",
           totalValue: { $sum: "$value" },
           subCategories: { 
             $push: { 
-              name: { $ifNull: ["$_id.subCategory", "General"] }, // Fallback for transactions without a subCategory
+              name: { $ifNull: ["$_id.subCategory", "General"] },
               value: "$value" 
             } 
           }
@@ -142,12 +139,12 @@ const getDashboardSummary = async (req, res) => {
       data: {
         totalIncome,
         totalExpenses,
-        totalBalance: currentBalance, // Actual Net Profit
+        totalBalance: currentBalance, 
         totalBudgetLimit, 
         recentTransactions,
         categorySpending,
         monthlyData,
-        dailyData // Sent to frontend for Trend Modals
+        dailyData 
       }
     });
 
