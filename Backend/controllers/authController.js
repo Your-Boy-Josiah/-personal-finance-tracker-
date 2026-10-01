@@ -71,7 +71,18 @@ const registerUser = async (req, res) => {
 
     // 5. Send success response with token and new preference fields
     if (user) {
-      res.status(201).json(createAuthResponse(user));
+      res.status(201).json({
+        _id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.fullName, // Accessing the virtual property
+        email: user.email,
+        role: user.role,                 // UPDATED: Include role
+        baseCurrency: user.baseCurrency, // UPDATED: Include currency
+        monthlyIncome: user.monthlyIncome,
+        avatar: user.avatar,             // UPDATED: Include avatar on register
+        token: generateToken(user._id),
+      });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
     }
@@ -97,7 +108,17 @@ const loginUser = async (req, res) => {
 
     // 3. Compare incoming plain text password to the hashed database password
     if (user && (await bcrypt.compare(password, user.password))) {
-      res.status(200).json(createAuthResponse(user));
+      res.status(200).json({
+        _id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,                 // UPDATED: Include role
+        baseCurrency: user.baseCurrency, // UPDATED: Include currency
+        monthlyIncome: user.monthlyIncome,
+        token: generateToken(user._id),
+      });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -283,5 +304,5 @@ module.exports = {
   getMe,           
   updateProfile,
   changePassword,
-  uploadAvatar // ADDED
+  uploadAvatar 
 };

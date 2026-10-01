@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext"; // ADDED
+import { useAuth } from "../context/AuthContext";
 import { getAvatarUrl } from "../utils/avatar";
 import { formatDateOnly, getToday } from "../utils/dates";
 import { 
@@ -53,7 +53,7 @@ const MemoizedPieChart = React.memo(({ data, isEmpty, onPieClick }) => (
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // ADDED
+  const { user } = useAuth();
   
   // Data States
   const [summary, setSummary] = useState(null);
@@ -119,12 +119,16 @@ export default function Dashboard() {
     e.preventDefault();
     setIsSubmittingQuick(true);
     try {
+      // Timezone-aware date string generation (YYYY-MM-DD)
+      const now = new Date();
+      const localDateString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
       await api.post("/transactions", {
         type: quickAction,
         amount: Number(quickForm.amount),
         category: quickForm.category,
         description: quickForm.description || (quickAction === 'income' ? 'Quick Deposit' : 'Quick Transfer'),
-        transactionDate: getToday()
+        transactionDate: getToday() || localDateString
       });
       setQuickAction(null);
       setQuickForm({ amount: "", category: "", description: "" });
@@ -219,7 +223,7 @@ export default function Dashboard() {
               </div>
               <button onClick={() => setActiveModal(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
             </div>
-            <div className="h-[400px] w-full">
+            <div className="h-100 w-full">
               {dailyData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-slate-500">No transactions available in the last 30 days.</div>
               ) : (
@@ -258,7 +262,7 @@ export default function Dashboard() {
             
             <p className="text-2xl font-bold mb-6 dark:text-white">Total: ₦{pieModalData.value.toLocaleString()}</p>
             
-            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-75 overflow-y-auto pr-2">
               {pieModalData.subCategories.map((sub, idx) => (
                 <div key={idx} className="flex justify-between items-center p-3 rounded-lg border border-slate-100 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900/50">
                   <span className="text-sm font-medium dark:text-neutral-300">{sub.name}</span>
@@ -305,7 +309,7 @@ export default function Dashboard() {
                         </span>
                       </span>
                     ) : (
-                      <span className="flex h-[80px] items-center justify-center text-xs text-slate-400 dark:text-neutral-600">No data</span>
+                      <span className="flex h-20 items-center justify-center text-xs text-slate-400 dark:text-neutral-600">No data</span>
                     )}
                   </button>
                 )
