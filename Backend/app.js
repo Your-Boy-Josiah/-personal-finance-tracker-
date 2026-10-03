@@ -5,6 +5,11 @@
 //  connects to MongoDB, and mounts API routes.
 // ===============================================================
 
+const dns = require("node:dns");
+
+// Use Cloudflare because the default network DNS resolver times out.
+dns.setServers(["1.1.1.1", "1.0.0.1"]);
+
 const express = require("express");
 const path = require('path');
 const dotenv = require("dotenv");
