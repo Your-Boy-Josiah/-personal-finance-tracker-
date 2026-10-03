@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 // Sidebar limits in pixels
-const MIN_WIDTH = 80;
+const MIN_WIDTH = 64;
 const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 256; 
 
@@ -31,9 +31,9 @@ export default function Layout() {
       return MIN_WIDTH;
     }
 
-    const savedWidth = localStorage.getItem("monie-track-sidebar-width");
-    if (savedWidth !== null) {
-      return parseInt(savedWidth, 10);
+    const savedWidth = Number(localStorage.getItem("monie-track-sidebar-width"));
+    if (Number.isFinite(savedWidth)) {
+      return Math.min(Math.max(savedWidth, MIN_WIDTH), MAX_WIDTH);
     }
     return DEFAULT_WIDTH;
   });
@@ -155,7 +155,7 @@ export default function Layout() {
         {/* INVISIBLE DRAG HANDLE */}
         <div
           onMouseDown={startResizing}
-          className="absolute right-0 top-0 z-30 h-full w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-emerald-500/50 active:bg-emerald-500"
+          className="absolute right-0 top-0 z-30 hidden h-full w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-emerald-500/50 active:bg-emerald-500 md:block"
           title="Drag to resize"
         />
 
@@ -170,7 +170,7 @@ export default function Layout() {
           {sidebarWidth > MIN_WIDTH ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
 
-        <div className="p-4 mb-2 h-16 flex items-center">
+        <div className="mb-2 flex h-16 items-center p-3 md:p-4">
           <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
             <div className="bg-emerald-100 p-1.5 rounded-lg shrink-0">
               <Wallet className="h-5 w-5 text-[#0f2923]" />
@@ -179,7 +179,7 @@ export default function Layout() {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
+        <nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto px-2 md:px-3 scrollbar-hide">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -188,7 +188,7 @@ export default function Layout() {
                 key={item.name} 
                 to={item.path} 
                 title={!isExpandedText ? item.name : ""} 
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap overflow-hidden ${isActive ? "bg-emerald-500/20 dark:bg-neutral-800 text-emerald-300 dark:text-white font-medium" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}
+                className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-colors whitespace-nowrap overflow-hidden md:px-3 ${isActive ? "bg-emerald-500/20 dark:bg-neutral-800 text-emerald-300 dark:text-white font-medium" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}
               >
                 <Icon size={18} className="shrink-0" />
                 {isExpandedText && <span className="text-sm transition-opacity duration-300">{item.name}</span>}
@@ -197,13 +197,13 @@ export default function Layout() {
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/10 dark:border-neutral-800 space-y-2 overflow-hidden">
-          <button onClick={toggleTheme} title={!isExpandedText ? "Toggle Theme" : ""} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-white/5 transition-colors whitespace-nowrap cursor-pointer">
+        <div className="space-y-2 overflow-hidden border-t border-white/10 p-2 dark:border-neutral-800 md:p-3">
+          <button onClick={toggleTheme} title={!isExpandedText ? "Toggle Theme" : ""} className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-slate-300 transition-colors whitespace-nowrap cursor-pointer hover:bg-white/5 md:px-3">
             {isDark ? <Sun size={18} className="shrink-0" /> : <Moon size={18} className="shrink-0" />}
             {isExpandedText && <span className="text-sm transition-opacity duration-300">Toggle Theme</span>}
           </button>
           
-          <button onClick={logout} title={!isExpandedText ? "Log out" : ""} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors whitespace-nowrap cursor-pointer">
+          <button onClick={logout} title={!isExpandedText ? "Log out" : ""} className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-rose-400 transition-colors whitespace-nowrap cursor-pointer hover:bg-rose-500/10 md:px-3">
             <LogOut size={18} className="shrink-0" />
             {isExpandedText && <span className="text-sm font-medium transition-opacity duration-300">Log out</span>}
           </button>

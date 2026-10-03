@@ -435,8 +435,8 @@ const Categories = () => {
       {/* ============================================================== */}
       {viewingCategory && !isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <section className="flex w-full max-w-2xl max-h-[85vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/50 px-8 py-5 dark:border-neutral-800 dark:bg-neutral-900/50">
+          <section className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/50 px-4 py-4 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8 sm:py-5">
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 rounded-full shadow-sm" style={{ backgroundColor: viewingCategory.color }}></div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">{viewingCategory.name}</h2>
@@ -450,7 +450,7 @@ const Categories = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8">
               <div className="mb-8">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
                   <Tag size={16} /> Filter by Sub-Category
@@ -518,7 +518,7 @@ const Categories = () => {
               </div>
             </div>
             
-            {viewingCategory.user && <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-4 dark:border-neutral-800 dark:bg-neutral-900/50">
+            {viewingCategory.user && <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-4 py-4 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8">
               <button 
                 onClick={(e) => { setViewingCategory(null); openEditModal(e, viewingCategory); }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200"
@@ -535,8 +535,8 @@ const Categories = () => {
       {/* ============================================================== */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <section className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
-            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-8 py-5 dark:border-neutral-800 dark:bg-neutral-900/50">
+          <section className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-4 py-4 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8 sm:py-5">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {isEditing ? "Edit Category" : "New Category"}
               </h2>
@@ -549,7 +549,7 @@ const Categories = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveCategory} className="flex flex-col gap-6 p-8">
+            <form onSubmit={handleSaveCategory} className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-8">
               
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
@@ -648,7 +648,7 @@ const Categories = () => {
 
               {formError && <p className="text-sm font-medium text-rose-600 dark:text-rose-400">{formError}</p>}
               
-              <div className="mt-4 flex justify-end gap-3 border-t border-slate-100 pt-6 dark:border-neutral-800">
+              <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5 dark:border-neutral-800 sm:pt-6">
                 <button type="button" onClick={() => setIsFormOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
                   Cancel
                 </button>

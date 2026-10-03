@@ -167,7 +167,7 @@ export default function Account() {
       {/* BANK ADDITION MODAL */}
       {showBankModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setShowBankModal(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6" onClick={e => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-4">
               <h2 className="text-lg font-bold dark:text-white flex items-center gap-2"><Landmark size={18}/> Link Institution</h2>
               <button onClick={() => setShowBankModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={18} /></button>
@@ -199,12 +199,12 @@ export default function Account() {
       </div>
 
       {/* SECTION 1: PROFILE & AVATAR */}
-      <section className="mb-10 max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+      <section className="mb-10 max-w-2xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
         <h2 className="text-base font-semibold dark:text-white">Profile Details</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400 mb-6">Your name, avatar, and email address.</p>
         
         {/* CLICKABLE FRAMED AVATAR */}
-        <div className="mb-8 flex items-center gap-6">
+        <div className="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
           <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/jpeg, image/png, image/jpg" className="hidden" />
           
           <div 
@@ -265,7 +265,7 @@ export default function Account() {
       </section>
 
       {/* SECTION 2: PASSWORD */}
-      <section className="mb-10 max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+      <section className="mb-10 max-w-2xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
         <h2 className="text-base font-semibold dark:text-white">Security</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400 mb-6">Ensure your account is using a long, random password to stay secure.</p>
         
@@ -289,7 +289,7 @@ export default function Account() {
       </section>
 
       {/* SECTION 3: CONNECTED BANK */}
-      <section className="max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+      <section className="max-w-2xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
         <div className="mb-6">
           <h2 className="text-base font-semibold dark:text-white flex items-center gap-2">
               Bank Connection 

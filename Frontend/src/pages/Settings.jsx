@@ -129,7 +129,7 @@ export default function Settings() {
       </div>
 
       {/* SECTION 1: APPEARANCE */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold dark:text-white">Appearance</h2>
@@ -148,7 +148,7 @@ export default function Settings() {
       </section>
 
       {/* SECTION 2: FINANCIAL PREFERENCES */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
         <div className="mb-6">
           <h2 className="text-base font-semibold dark:text-white">Financial Preferences</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Set your default currency and baseline monthly income.</p>
@@ -195,7 +195,7 @@ export default function Settings() {
       </section>
 
       {/* SECTION 3: NOTIFICATIONS & ALERTS */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
         <div className="mb-6">
           <h2 className="text-base font-semibold dark:text-white flex items-center gap-2">
             <Bell size={18} className="text-indigo-500" /> Notifications & Alerts
@@ -213,7 +213,6 @@ export default function Settings() {
               <p className="text-sm font-bold dark:text-white">Email Summary Reports</p>
               <p className="text-xs text-slate-500 dark:text-neutral-400">Saved as an account preference. Email delivery is not configured.</p>
             </div>
-            <input type="checkbox" disabled checked={emailAlerts} onChange={() => setEmailAlerts(!emailAlerts)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed" />
             <input type="checkbox" checked={emailAlerts} disabled={savingNotifications} onChange={(event) => handleNotificationChange("emailSummaryReports", event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
           </label>
 
@@ -222,7 +221,6 @@ export default function Settings() {
               <p className="text-sm font-bold dark:text-white">Budget Breach Warnings</p>
               <p className="text-xs text-slate-500 dark:text-neutral-400">Create an alert when spending reaches 90% of a cap.</p>
             </div>
-            <input type="checkbox" disabled checked={budgetWarnings} onChange={() => setBudgetWarnings(!budgetWarnings)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed" />
             <input type="checkbox" checked={budgetWarnings} disabled={savingNotifications} onChange={(event) => handleNotificationChange("budgetBreachWarnings", event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
           </label>
           {notificationMessage && <p role="status" className="text-sm text-emerald-600 dark:text-emerald-400">{notificationMessage}</p>}
@@ -231,7 +229,7 @@ export default function Settings() {
       </section>
 
       {/* SECTION 4: DATA EXPORT (BACKUP) */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold dark:text-white flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-500" /> Data Backup & Export</h2>

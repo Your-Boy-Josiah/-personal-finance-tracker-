@@ -224,7 +224,7 @@ export default function Dashboard() {
       {/* TREND GRAPHS MODAL */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setActiveModal(null)}>
-          <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6" onClick={e => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold dark:text-white">{modalConfig[activeModal].title}</h2>
@@ -236,7 +236,7 @@ export default function Dashboard() {
               </div>
               <button onClick={() => setActiveModal(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
             </div>
-            <div className="h-100 w-full">
+            <div className="h-64 w-full sm:h-100">
               {dailyData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-slate-500">No transactions available in the last 30 days.</div>
               ) : (
@@ -264,7 +264,7 @@ export default function Dashboard() {
       {/* UNWINDING PIE MODAL */}
       {pieModalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPieModalData(null)}>
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl animate-in zoom-in-95 duration-200 dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6" onClick={e => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold dark:text-white flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: pieModalData.color }}></span>
@@ -293,7 +293,7 @@ export default function Dashboard() {
       {/* CALENDAR CATALOG MODAL */}
       {showCalendar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setShowCalendar(false)}>
-          <div className="w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
+          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6" onClick={e => e.stopPropagation()}>
             <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4 dark:border-neutral-800">
               <h2 className="text-xl font-bold dark:text-white">Annual Financial Catalog · {currentYear}</h2>
               <button onClick={() => setShowCalendar(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={20} /></button>
@@ -335,7 +335,7 @@ export default function Dashboard() {
       {/* QUICK ACTION MODAL */}
       {quickAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setQuickAction(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 dark:bg-[#0a0a0a]" onClick={e => e.stopPropagation()}>
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6" onClick={e => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-4">
               <h2 className="text-lg font-bold dark:text-white">{quickAction === 'income' ? 'Add Money (Income)' : 'Transfer (Expense)'}</h2>
               <button onClick={() => setQuickAction(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 dark:hover:text-white transition-colors"><X size={18} /></button>
@@ -383,7 +383,7 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold dark:text-white">{greeting}, {user?.firstName || "there"}</h1>
           <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">Here’s your financial overview.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button 
             onClick={() => setShowCalendar(true)}
             className="flex items-center gap-2 rounded-md bg-white border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
@@ -399,7 +399,7 @@ export default function Dashboard() {
           </button>
           
           {/* USER AVATAR DISPLAY */}
-          <div className="ml-2 h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100 dark:border-neutral-700 dark:bg-neutral-800">
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100 dark:border-neutral-700 dark:bg-neutral-800 sm:ml-2">
             {avatarUrl ? (
               <img src={avatarUrl} alt="User Profile" className="h-full w-full object-cover object-center" />
             ) : (
@@ -461,20 +461,20 @@ export default function Dashboard() {
             </div>
             <div className="divide-y divide-slate-100 dark:divide-neutral-800/50">
               {recentTransactions.map((tx) => (
-                <div key={tx._id} className="p-3 px-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-neutral-900 transition-colors cursor-pointer" onClick={() => navigate('/app/transactions')}>
-                  <div className="flex items-center gap-3">
+                <div key={tx._id} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-900" onClick={() => navigate('/app/transactions')}>
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="w-8 h-8 rounded bg-slate-100 dark:bg-neutral-800 flex items-center justify-center text-xs font-bold" style={{ color: tx.category?.color || '#8b5cf6' }}>
                       {tx.category?.name?.charAt(0) || '?'}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium dark:text-white flex items-center gap-2">
-                        {tx.description || tx.merchant || 'Transaction'}
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 text-sm font-medium dark:text-white">
+                        <span className="truncate">{tx.description || tx.merchant || 'Transaction'}</span>
                         {tx.subCategory && <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[10px] uppercase text-slate-600 dark:bg-neutral-800 dark:text-neutral-400">{tx.subCategory}</span>}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-neutral-500">{formatDateOnly(tx.transactionDate || tx.createdAt)}</p>
                     </div>
                   </div>
-                  <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-900 dark:text-white'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>
+                  <span className={`shrink-0 whitespace-nowrap text-sm font-medium ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-900 dark:text-white'} ${isBlurred ? 'filter blur-sm select-none' : ''}`}>
                     {tx.type === 'income' ? '+' : '-'}{blurText(formatCurrency(tx.amount))}
                   </span>
                 </div>
@@ -487,9 +487,9 @@ export default function Dashboard() {
         {/* RIGHT COLUMN: SIDE PANEL */}
         <div className="xl:col-span-4 space-y-5">
           
-          <div className="bg-[#1e1b4b] dark:bg-black dark:border dark:border-neutral-800 text-white p-5 rounded-xl shadow-lg relative overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+          <div className="relative overflow-hidden rounded-xl bg-[#1e1b4b] p-4 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border dark:border-neutral-800 dark:bg-black sm:p-5">
             <p className="text-xs font-medium text-indigo-200 dark:text-neutral-400">Available balance</p>
-            <h3 className={`text-3xl font-bold mt-1 ${isBlurred ? 'filter blur-md select-none' : ''}`}>{blurText(formatCurrency(availableBalance))}</h3>
+            <h3 className={`mt-1 break-words text-2xl font-bold sm:text-3xl ${isBlurred ? 'filter blur-md select-none' : ''}`}>{blurText(formatCurrency(availableBalance))}</h3>
             
             <div className="flex gap-2 mt-6">
               <button onClick={() => openQuickAction('income')} className="flex-1 bg-white dark:bg-neutral-800 text-[#1e1b4b] dark:text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-1 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors"><Plus size={14} /> Add money</button>
@@ -498,7 +498,7 @@ export default function Dashboard() {
           </div>
 
           {/* DYNAMIC BANK HUB */}
-          <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-5">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-bold dark:text-white flex items-center gap-2">
                 <Landmark size={16} className="text-indigo-500"/> Connected Banks
@@ -521,7 +521,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-5">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-sm font-bold dark:text-white">Monthly Budget</h3>
               <Link to="/app/budget" className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Manage</Link>
