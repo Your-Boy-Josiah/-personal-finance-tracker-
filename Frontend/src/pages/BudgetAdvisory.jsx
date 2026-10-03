@@ -10,6 +10,7 @@ import {
   PieChart, BrainCircuit, Activity, CalendarClock, Target
 } from "lucide-react";
 import api from "../services/api";
+import { PageSkeleton } from "../components/LoadingState";
 
 // ==============================================================
 // HELPER FUNCTIONS
@@ -86,7 +87,7 @@ const BudgetAdvisory = () => {
   // RENDER UI
   // ==============================================================
 
-  if (loading) return <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500"><div className="flex items-center gap-3"><div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div><p>Reviewing your spending patterns...</p></div></div>;
+  if (loading) return <PageSkeleton rows={5} />;
   if (error) return <div className="mx-auto max-w-4xl p-8 text-center text-sm text-rose-600 dark:text-rose-400">{error}</div>;
   if (!data) return null;
 
@@ -112,7 +113,7 @@ const BudgetAdvisory = () => {
         
         {/* TOP ROW: HEALTH SCORE & CALENDAR MATH */}
         <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] flex items-center gap-6 relative overflow-hidden">
+          <div className="relative flex items-center gap-4 overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:gap-6 sm:p-6">
             <div className="absolute -right-6 -top-6 opacity-5 dark:opacity-10">
               <Activity size={120} className={healthScore.color} />
             </div>
@@ -121,12 +122,12 @@ const BudgetAdvisory = () => {
             </div>
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">Health Score</h2>
-              <p className={`text-xl font-bold mt-1 ${healthScore.color}`}>{healthScore.title}</p>
+              <p className={`mt-1 text-lg font-bold sm:text-xl ${healthScore.color}`}>{healthScore.title}</p>
               <p className="text-xs text-slate-500 mt-1">Based on category pacing & ratios.</p>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] flex flex-col justify-center">
+          <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-6">
             <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
               <CalendarClock size={18} />
               <h2 className="text-sm font-bold">Month Trajectory</h2>
@@ -151,26 +152,26 @@ const BudgetAdvisory = () => {
 
         {/* TOP ROW: CLASSIFICATIONS */}
         <div className="lg:col-span-4 space-y-3">
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-[#0a0a0a]">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:p-4 dark:border-neutral-800 dark:bg-[#0a0a0a]">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"><CheckCircle size={16} /></div>
               <span className="text-sm font-medium text-slate-700 dark:text-neutral-300">Essential</span>
             </div>
-            <span className="font-bold text-slate-900 dark:text-white">{formatAmount(classificationTotals?.essential)}</span>
+            <span className="shrink-0 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">{formatAmount(classificationTotals?.essential)}</span>
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-[#0a0a0a]">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:p-4 dark:border-neutral-800 dark:bg-[#0a0a0a]">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"><AlertTriangle size={16} /></div>
               <span className="text-sm font-medium text-slate-700 dark:text-neutral-300">Non-Essential</span>
             </div>
-            <span className="font-bold text-slate-900 dark:text-white">{formatAmount(classificationTotals?.["non-essential/cut-back"])}</span>
+            <span className="shrink-0 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">{formatAmount(classificationTotals?.["non-essential/cut-back"])}</span>
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-[#0a0a0a]">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:p-4 dark:border-neutral-800 dark:bg-[#0a0a0a]">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"><PieChart size={16} /></div>
               <span className="text-sm font-medium text-slate-700 dark:text-neutral-300">Miscellaneous</span>
             </div>
-            <span className="font-bold text-slate-900 dark:text-white">{formatAmount(classificationTotals?.miscellaneous)}</span>
+            <span className="shrink-0 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">{formatAmount(classificationTotals?.miscellaneous)}</span>
           </div>
         </div>
       </div>
@@ -186,7 +187,7 @@ const BudgetAdvisory = () => {
           
           <div className="space-y-3">
             {advice.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 dark:border-neutral-800 dark:bg-[#0a0a0a]">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-8">
                 Not enough transaction data this month to generate an AI behavior profile.
               </div>
             ) : (
@@ -229,7 +230,7 @@ const BudgetAdvisory = () => {
             {overspentCategories.length > 0 ? "Immediate Action Required" : "Budget Status"}
           </h2>
           
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-5">
             {overspentCategories.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center text-slate-500">
                 <CheckCircle size={40} className="mb-3 text-emerald-500/50" />
@@ -240,12 +241,12 @@ const BudgetAdvisory = () => {
               <div className="space-y-5">
                 {overspentCategories.map((overage, idx) => (
                   <div key={idx} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0 dark:border-neutral-800">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <span className="min-w-0 text-sm font-bold text-slate-900 dark:text-white">
                         {overage.category?.name || "Unknown"}
                         {overage.subCategory && <span className="ml-1 text-slate-500 font-medium">({overage.subCategory})</span>}
                       </span>
-                      <span className="text-sm font-black text-rose-600 dark:text-rose-400">
+                      <span className="shrink-0 whitespace-nowrap text-sm font-black text-rose-600 dark:text-rose-400">
                         +{formatAmount(overage.amountOver)} Over
                       </span>
                     </div>

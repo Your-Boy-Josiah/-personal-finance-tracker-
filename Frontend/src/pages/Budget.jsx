@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, AlertCircle, CheckCircle2, PieChart, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { PageSkeleton } from "../components/LoadingState";
 
 // ==============================================================
 // MAIN COMPONENT
@@ -156,16 +157,7 @@ const Budget = () => {
   // RENDER UI
   // ==============================================================
 
-  if (loading) {
-    return (
-      <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500">
-        <div className="flex items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-          <p>Loading budget...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton rows={5} />;
 
   return (
     <div className="mx-auto min-h-full max-w-5xl p-4 sm:p-6 lg:p-8">
@@ -194,7 +186,7 @@ const Budget = () => {
 
       {/* REAL-TIME ALLOCATION TRACKER */}
       <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-5">
           <div className="flex items-center gap-2 text-slate-500 dark:text-neutral-400 mb-2">
             <ArrowUpRight size={16} className="text-emerald-500" />
             <h3 className="text-xs font-semibold uppercase tracking-wider">Total Income</h3>
@@ -204,7 +196,7 @@ const Budget = () => {
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-5">
           <div className="flex items-center gap-2 text-slate-500 dark:text-neutral-400 mb-2">
             <PieChart size={16} className="text-indigo-500" />
             <h3 className="text-xs font-semibold uppercase tracking-wider">Allocated Budget</h3>
@@ -214,7 +206,7 @@ const Budget = () => {
           </p>
         </div>
 
-        <div className={`rounded-xl border p-5 shadow-sm transition-colors ${
+        <div className={`rounded-xl border p-4 shadow-sm transition-colors sm:p-5 ${
           isOverAllocated 
             ? "border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-500/10" 
             : "border-slate-200 bg-white dark:border-neutral-800 dark:bg-[#0a0a0a]"
@@ -231,7 +223,7 @@ const Budget = () => {
         </div>
 
         {/* Progress Bar Span */}
-        <div className="md:col-span-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-[#0a0a0a]">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:col-span-3 dark:border-neutral-800 dark:bg-[#0a0a0a] sm:p-5">
           <div className="flex justify-between items-end mb-2">
             <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">Budget Usage Strategy</p>
             <p className={`text-sm font-bold ${isOverAllocated ? 'text-rose-500' : 'text-slate-900 dark:text-white'}`}>
@@ -254,7 +246,7 @@ const Budget = () => {
           <div className="border-b border-slate-100 bg-slate-50 px-5 py-4 dark:border-neutral-800 dark:bg-neutral-900/50">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Income Setup</h2>
           </div>
-          <div className="grid grid-cols-1 gap-6 p-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 p-4 sm:grid-cols-3 sm:gap-6 sm:p-5">
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">Monthly Amount</label>
               <div className="relative">
@@ -278,7 +270,7 @@ const Budget = () => {
 
         {/* SECTION 2: SPENDING TARGETS */}
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-[#0a0a0a]">
-          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-5">
             <div>
               <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Spending Limits</h2>
             </div>
@@ -298,7 +290,7 @@ const Budget = () => {
                 const hasSubCategories = activeCategoryObj && activeCategoryObj.subCategories && activeCategoryObj.subCategories.length > 0;
 
                 return (
-                  <div key={index} className="grid grid-cols-1 items-end gap-4 p-5 sm:grid-cols-12 sm:gap-4 hover:bg-slate-50 dark:hover:bg-neutral-900/30 transition-colors">
+                  <div key={index} className="grid grid-cols-1 items-end gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-neutral-900/30 sm:grid-cols-12 sm:p-5">
                     
                     {/* Category Column */}
                     <div className="sm:col-span-4">

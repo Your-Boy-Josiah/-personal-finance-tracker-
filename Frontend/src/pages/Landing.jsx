@@ -10,30 +10,30 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen overflow-hidden bg-[#f4f5ef] text-[#14241e]">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-10">
+      <header className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 md:px-10">
         <Link to="/" className="flex items-center gap-3" aria-label="Monie-Track home">
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#12382d] text-[#d5f1b8]">
             <Wallet size={21} />
           </span>
-          <span className="text-lg font-bold">Monie-Track</span>
+          <span className="text-base font-bold sm:text-lg">Monie-Track</span>
         </Link>
-        <nav className="flex items-center gap-3 text-sm font-semibold">
-          <Link to={user ? "/app" : "/login"} className="px-3 py-2 hover:text-emerald-800">
+        <nav className="flex shrink-0 items-center gap-1 text-sm font-semibold sm:gap-3">
+          <Link to={user ? "/app" : "/login"} className="hidden px-3 py-2 hover:text-emerald-800 sm:block">
             {user ? "Dashboard" : "Sign in"}
           </Link>
-          <Link to={primaryHref} className="rounded-md bg-[#12382d] px-4 py-2.5 text-white transition hover:bg-[#205b45]">
+          <Link to={primaryHref} className="rounded-md bg-[#12382d] px-3 py-2.5 text-white transition hover:bg-[#205b45] sm:px-4">
             {user ? "Open app" : "Get started"}
           </Link>
         </nav>
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-12 md:px-10 md:pb-24 md:pt-20 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="mx-auto grid max-w-7xl items-center gap-10 px-4 pb-12 pt-10 sm:px-5 sm:pb-16 sm:pt-12 md:px-10 md:pb-24 md:pt-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
           <div className="relative z-10">
             <p className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#527465]">
               <span className="h-px w-8 bg-[#527465]" /> Your money, in focus
             </p>
-            <h1 className="max-w-xl font-serif text-5xl font-medium leading-[1.06] sm:text-6xl">
+            <h1 className="max-w-xl font-serif text-4xl font-medium leading-[1.06] sm:text-5xl md:text-6xl">
               Make every part of your money <span className="text-[#548266]">add up.</span>
             </h1>
             <p className="mt-6 max-w-lg text-base leading-7 text-[#5e6d65]">

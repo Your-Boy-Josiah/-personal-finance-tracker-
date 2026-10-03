@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Wallet, Eye, EyeOff } from "lucide-react";
+import { ButtonLoadingLabel } from "../components/LoadingState";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 // Mock data to draw the decorative chart on the login screen
@@ -132,10 +133,10 @@ export default function Login() {
       </div>
 
       {/* RIGHT PANEL - Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center bg-slate-50 dark:bg-[#0a0a0a] p-8 relative transition-colors">
+      <div className="relative flex w-full flex-col items-center justify-center bg-slate-50 p-5 transition-colors dark:bg-[#0a0a0a] sm:p-8 lg:w-1/2">
         
         {/* Top Right Register Link */}
-        <div className="absolute top-8 right-8 text-sm">
+        <div className="absolute right-5 top-5 text-xs sm:right-8 sm:top-8 sm:text-sm">
           <span className="text-slate-500 dark:text-neutral-400">New to Monie-Track? </span>
           <Link to="/register" className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline underline-offset-4">
             Create an account
@@ -143,7 +144,7 @@ export default function Login() {
         </div>
 
         {/* Mobile Logo */}
-        <div className="flex items-center gap-3 mb-12 lg:hidden w-full max-w-md">
+        <div className="mb-10 flex w-full max-w-md items-center gap-3 lg:hidden sm:mb-12">
           <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg">
             <Wallet className="h-6 w-6 text-emerald-700 dark:text-emerald-400" />
           </div>
@@ -151,7 +152,7 @@ export default function Login() {
         </div>
 
         <div className="w-full max-w-md">
-          <h2 className="text-4xl font-serif font-bold text-slate-900 dark:text-white mb-2">Welcome</h2>
+          <h2 className="mb-2 text-3xl font-serif font-bold text-slate-900 dark:text-white sm:text-4xl">Welcome</h2>
           <p className="text-slate-500 dark:text-neutral-400 mb-8">Sign in to securely access your finances.</p>
 
           {error && (
@@ -209,7 +210,7 @@ export default function Login() {
               disabled={loading}
               className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-offset-[#0a0a0a] disabled:opacity-70 transition-all mt-6 shadow-lg shadow-emerald-500/30"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? <ButtonLoadingLabel>Signing in...</ButtonLoadingLabel> : "Sign in"}
             </button>
           </form>
         </div>

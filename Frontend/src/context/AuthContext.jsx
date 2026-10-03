@@ -14,7 +14,8 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
       setLoading(false);
+      setIsCheckingAuth(false);
     };
     checkLoggedIn();
   }, []);
@@ -49,7 +51,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
-      const { token, ...userData } = res.data;
+      const userData = { ...res.data };
+      delete userData.token;
       setUser(userData);
       return { success: true };
     } catch (err) {
@@ -66,7 +69,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post("/auth/register", userData);
       localStorage.setItem("token", res.data.token);
-      const { token, ...authenticatedUser } = res.data;
+      const authenticatedUser = { ...res.data };
+      delete authenticatedUser.token;
       setUser(authenticatedUser);
       return { success: true };
     } catch (err) {
@@ -112,8 +116,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, updateProfile, updateUser, changePassword, logout }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, loading, isCheckingAuth, error, login, register, updateProfile, updateUser, changePassword, logout }}>
+      {children}
     </AuthContext.Provider>
   );
 };

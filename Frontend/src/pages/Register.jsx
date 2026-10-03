@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Wallet, Eye, EyeOff, ShieldCheck, BarChart3, Globe } from "lucide-react";
+import { ButtonLoadingLabel } from "../components/LoadingState";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -52,10 +53,10 @@ const handleSubmit = async (e) => {
     <div className="min-h-screen bg-slate-100 dark:bg-black flex items-center justify-center p-4 md:p-8 transition-colors duration-200">
       
       {/* Floating Card Container */}
-      <div className="w-full max-w-6xl bg-white dark:bg-[#0a0a0a] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col-reverse lg:flex-row border border-slate-200 dark:border-neutral-800 transition-colors">
+      <div className="flex w-full max-w-6xl flex-col-reverse overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-colors dark:border-neutral-800 dark:bg-[#0a0a0a] sm:rounded-[2rem] lg:flex-row">
         
         {/* LEFT PANEL - Registration Form */}
-        <div className="w-full lg:w-1/2 p-8 md:p-12 xl:p-16 flex flex-col justify-center">
+        <div className="flex w-full flex-col justify-center p-5 sm:p-8 md:p-12 xl:p-16 lg:w-1/2">
           
           {/* Logo (Visible mainly on mobile where right panel is hidden/shifted) */}
           <div className="flex items-center gap-3 mb-10 lg:hidden">
@@ -66,7 +67,7 @@ const handleSubmit = async (e) => {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 dark:text-white mb-2">Create an account</h2>
+            <h2 className="mb-2 text-2xl font-serif font-bold text-slate-900 dark:text-white sm:text-3xl md:text-4xl">Create an account</h2>
             <p className="text-slate-500 dark:text-neutral-400">Start taking complete control of your financial future.</p>
           </div>
 
@@ -147,7 +148,7 @@ const handleSubmit = async (e) => {
               disabled={loading}
               className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-offset-black disabled:opacity-70 transition-all mt-6 shadow-lg shadow-emerald-500/30"
             >
-              {loading ? "Creating account..." : "Complete registration"}
+              {loading ? <ButtonLoadingLabel>Creating account...</ButtonLoadingLabel> : "Complete registration"}
             </button>
 
             <p className="text-center text-sm text-slate-500 dark:text-neutral-400 mt-6">
@@ -160,7 +161,7 @@ const handleSubmit = async (e) => {
         </div>
 
         {/* RIGHT PANEL - Feature Showcase */}
-        <div className="w-full lg:w-1/2 bg-[#0f2923] dark:bg-[#050505] p-8 md:p-12 xl:p-16 text-white flex flex-col justify-between relative overflow-hidden dark:border-l dark:border-neutral-800 transition-colors">
+        <div className="relative flex w-full flex-col justify-between overflow-hidden bg-[#0f2923] p-5 text-white transition-colors dark:border-neutral-800 dark:bg-[#050505] sm:p-8 md:p-12 xl:p-16 lg:w-1/2 lg:border-l">
           
           {/* Background Decorative Glow (Dark mode only) */}
           <div className="hidden dark:block absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none"></div>
@@ -174,7 +175,7 @@ const handleSubmit = async (e) => {
           </div>
 
           <div className="my-12 lg:my-0 relative z-10">
-            <h3 className="text-3xl md:text-4xl font-serif font-medium leading-tight mb-8">
+            <h3 className="mb-8 text-2xl font-serif font-medium leading-tight sm:text-3xl md:text-4xl">
               Join thousands mastering their wealth.
             </h3>
             

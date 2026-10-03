@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, X, Tag, ArrowDownRight, ArrowUpRight, AlertTriangle, Pencil, Store } from "lucide-react";
 import api from "../services/api";
+import { PageSkeleton } from "../components/LoadingState";
 import { formatDateOnly } from "../utils/dates";
 
 const PRESET_COLORS = [
@@ -237,16 +238,7 @@ const Categories = () => {
   // RENDER UI
   // ==============================================================
 
-  if (loading) {
-    return (
-      <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500">
-        <div className="flex items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-          <p>Loading categories...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton rows={6} />;
 
   return (
     <div className="mx-auto min-h-full max-w-7xl p-4 sm:p-6 lg:p-8">
@@ -435,8 +427,8 @@ const Categories = () => {
       {/* ============================================================== */}
       {viewingCategory && !isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <section className="flex w-full max-w-2xl max-h-[85vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
-            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/50 px-8 py-5 dark:border-neutral-800 dark:bg-neutral-900/50">
+          <section className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/50 px-4 py-4 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8 sm:py-5">
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 rounded-full shadow-sm" style={{ backgroundColor: viewingCategory.color }}></div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">{viewingCategory.name}</h2>
@@ -450,7 +442,7 @@ const Categories = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8">
               <div className="mb-8">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
                   <Tag size={16} /> Filter by Sub-Category
@@ -484,7 +476,10 @@ const Categories = () => {
                 </h3>
                 
                 {loadingTransactions ? (
-                  <div className="py-8 text-center text-sm text-slate-500">Loading transactions...</div>
+                  <div className="space-y-3 py-2" role="status" aria-label="Loading category transactions">
+                    <span className="sr-only">Loading category transactions</span>
+                    {[1, 2, 3].map((row) => <div key={row} className="h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-neutral-800" />)}
+                  </div>
                 ) : displayedTransactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 py-10 text-center dark:border-neutral-800 dark:bg-neutral-900/30">
                     <div className="mb-3 rounded-full bg-emerald-100 p-3 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
@@ -518,7 +513,7 @@ const Categories = () => {
               </div>
             </div>
             
-            {viewingCategory.user && <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-4 dark:border-neutral-800 dark:bg-neutral-900/50">
+            {viewingCategory.user && <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-4 py-4 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8">
               <button 
                 onClick={(e) => { setViewingCategory(null); openEditModal(e, viewingCategory); }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200"
@@ -535,8 +530,8 @@ const Categories = () => {
       {/* ============================================================== */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <section className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
-            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-8 py-5 dark:border-neutral-800 dark:bg-neutral-900/50">
+          <section className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-[#0a0a0a] dark:ring-white/10">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-4 py-4 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8 sm:py-5">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {isEditing ? "Edit Category" : "New Category"}
               </h2>
@@ -549,7 +544,7 @@ const Categories = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveCategory} className="flex flex-col gap-6 p-8">
+            <form onSubmit={handleSaveCategory} className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-8">
               
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
@@ -648,7 +643,7 @@ const Categories = () => {
 
               {formError && <p className="text-sm font-medium text-rose-600 dark:text-rose-400">{formError}</p>}
               
-              <div className="mt-4 flex justify-end gap-3 border-t border-slate-100 pt-6 dark:border-neutral-800">
+              <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5 dark:border-neutral-800 sm:pt-6">
                 <button type="button" onClick={() => setIsFormOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
                   Cancel
                 </button>

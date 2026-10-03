@@ -343,7 +343,7 @@ const Transactions = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="transaction-dialog-heading"
-            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-xl dark:border-neutral-700 dark:bg-neutral-950 sm:p-6"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-xl dark:border-neutral-700 dark:bg-neutral-950 sm:p-6"
           >
             <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-neutral-800">
               <h2 id="transaction-dialog-heading" className="text-lg font-semibold">
@@ -571,8 +571,16 @@ const Transactions = () => {
             {error}
           </div>
         ) : loading ? (
-          <div className="p-8 text-center text-sm text-slate-500 dark:text-neutral-400" role="status">
-            Loading transactions...
+          <div className="space-y-4 p-5" role="status" aria-label="Loading transactions">
+            <span className="sr-only">Loading transactions</span>
+            {[1, 2, 3, 4, 5].map((row) => (
+              <div key={row} className="flex items-center justify-between gap-4 animate-pulse">
+                <div className="h-4 w-20 rounded bg-slate-200 dark:bg-neutral-800" />
+                <div className="h-4 flex-1 rounded bg-slate-200 dark:bg-neutral-800" />
+                <div className="h-4 w-24 rounded bg-slate-200 dark:bg-neutral-800" />
+                <div className="h-4 w-20 rounded bg-slate-200 dark:bg-neutral-800" />
+              </div>
+            ))}
           </div>
         ) : transactions.length === 0 ? (
           <div className="p-10 text-center">
@@ -583,8 +591,8 @@ const Transactions = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left text-sm">
+            <div className="overflow-x-auto overscroll-x-contain">
+              <table className="w-full min-w-[640px] text-left text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-neutral-400">
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium">Date</th>

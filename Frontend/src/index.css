@@ -1,2 +1,17 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body,
+#root {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  button,
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
