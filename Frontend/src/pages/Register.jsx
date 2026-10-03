@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Wallet, Eye, EyeOff, ShieldCheck, BarChart3, Globe } from "lucide-react";
+import { ButtonLoadingLabel } from "../components/LoadingState";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -147,7 +148,7 @@ const handleSubmit = async (e) => {
               disabled={loading}
               className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-offset-black disabled:opacity-70 transition-all mt-6 shadow-lg shadow-emerald-500/30"
             >
-              {loading ? "Creating account..." : "Complete registration"}
+              {loading ? <ButtonLoadingLabel>Creating account...</ButtonLoadingLabel> : "Complete registration"}
             </button>
 
             <p className="text-center text-sm text-slate-500 dark:text-neutral-400 mt-6">

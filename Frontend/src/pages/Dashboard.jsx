@@ -18,6 +18,7 @@ import {
   Plus, ArrowRight, TrendingUp, AlertCircle, X, 
   RefreshCw, Landmark, Eye, EyeOff, Calendar
 } from "lucide-react";
+import { DashboardSkeleton } from "../components/LoadingState";
 
 const COLORS = ['#8b5cf6', '#10b981', '#f59e0b', '#3b82f6', '#f43f5e', '#06b6d4', '#d946ef'];
 
@@ -138,7 +139,7 @@ export default function Dashboard() {
     finally { setIsSubmittingQuick(false); }
   };
 
-  if (loading) return <div className="p-8 text-sm text-slate-500 dark:text-neutral-400">Loading your data...</div>;
+  if (loading) return <DashboardSkeleton />;
   if (error) return <div className="p-8 text-sm text-rose-500">{error}</div>;
 
   // --- Core Metrics Math ---

@@ -10,6 +10,7 @@ import {
   PieChart, BrainCircuit, Activity, CalendarClock, Target
 } from "lucide-react";
 import api from "../services/api";
+import { PageSkeleton } from "../components/LoadingState";
 
 // ==============================================================
 // HELPER FUNCTIONS
@@ -86,7 +87,7 @@ const BudgetAdvisory = () => {
   // RENDER UI
   // ==============================================================
 
-  if (loading) return <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500"><div className="flex items-center gap-3"><div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div><p>Reviewing your spending patterns...</p></div></div>;
+  if (loading) return <PageSkeleton rows={5} />;
   if (error) return <div className="mx-auto max-w-4xl p-8 text-center text-sm text-rose-600 dark:text-rose-400">{error}</div>;
   if (!data) return null;
 

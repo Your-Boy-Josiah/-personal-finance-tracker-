@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Wallet, Eye, EyeOff } from "lucide-react";
+import { ButtonLoadingLabel } from "../components/LoadingState";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 // Mock data to draw the decorative chart on the login screen
@@ -209,7 +210,7 @@ export default function Login() {
               disabled={loading}
               className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-offset-[#0a0a0a] disabled:opacity-70 transition-all mt-6 shadow-lg shadow-emerald-500/30"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? <ButtonLoadingLabel>Signing in...</ButtonLoadingLabel> : "Sign in"}
             </button>
           </form>
         </div>

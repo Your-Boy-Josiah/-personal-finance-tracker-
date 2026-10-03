@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, X, Tag, ArrowDownRight, ArrowUpRight, AlertTriangle, Pencil, Store } from "lucide-react";
 import api from "../services/api";
+import { PageSkeleton } from "../components/LoadingState";
 import { formatDateOnly } from "../utils/dates";
 
 const PRESET_COLORS = [
@@ -237,16 +238,7 @@ const Categories = () => {
   // RENDER UI
   // ==============================================================
 
-  if (loading) {
-    return (
-      <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500">
-        <div className="flex items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-          <p>Loading categories...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton rows={6} />;
 
   return (
     <div className="mx-auto min-h-full max-w-7xl p-4 sm:p-6 lg:p-8">
@@ -484,7 +476,10 @@ const Categories = () => {
                 </h3>
                 
                 {loadingTransactions ? (
-                  <div className="py-8 text-center text-sm text-slate-500">Loading transactions...</div>
+                  <div className="space-y-3 py-2" role="status" aria-label="Loading category transactions">
+                    <span className="sr-only">Loading category transactions</span>
+                    {[1, 2, 3].map((row) => <div key={row} className="h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-neutral-800" />)}
+                  </div>
                 ) : displayedTransactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 py-10 text-center dark:border-neutral-800 dark:bg-neutral-900/30">
                     <div className="mb-3 rounded-full bg-emerald-100 p-3 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">

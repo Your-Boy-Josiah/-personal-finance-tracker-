@@ -571,8 +571,16 @@ const Transactions = () => {
             {error}
           </div>
         ) : loading ? (
-          <div className="p-8 text-center text-sm text-slate-500 dark:text-neutral-400" role="status">
-            Loading transactions...
+          <div className="space-y-4 p-5" role="status" aria-label="Loading transactions">
+            <span className="sr-only">Loading transactions</span>
+            {[1, 2, 3, 4, 5].map((row) => (
+              <div key={row} className="flex items-center justify-between gap-4 animate-pulse">
+                <div className="h-4 w-20 rounded bg-slate-200 dark:bg-neutral-800" />
+                <div className="h-4 flex-1 rounded bg-slate-200 dark:bg-neutral-800" />
+                <div className="h-4 w-24 rounded bg-slate-200 dark:bg-neutral-800" />
+                <div className="h-4 w-20 rounded bg-slate-200 dark:bg-neutral-800" />
+              </div>
+            ))}
           </div>
         ) : transactions.length === 0 ? (
           <div className="p-10 text-center">

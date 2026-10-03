@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, AlertCircle, CheckCircle2, PieChart, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { PageSkeleton } from "../components/LoadingState";
 
 // ==============================================================
 // MAIN COMPONENT
@@ -156,16 +157,7 @@ const Budget = () => {
   // RENDER UI
   // ==============================================================
 
-  if (loading) {
-    return (
-      <div className="flex min-h-full items-center justify-center p-8 text-sm text-slate-500">
-        <div className="flex items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-          <p>Loading budget...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton rows={5} />;
 
   return (
     <div className="mx-auto min-h-full max-w-5xl p-4 sm:p-6 lg:p-8">
